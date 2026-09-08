@@ -10,8 +10,8 @@ rendered in an HD-2D style. Not for distribution.
 | --- | --- | --- |
 | `Packages/com.aaz.hd2d` | HD-2D rendering: lit billboard sprites, tilt-shift depth of field, diorama camera rig | Built |
 | `Packages/com.aaz.core` | Rules-agnostic primitives: deterministic dice, random tables, hex map, run state | Built |
-| `Packages/com.aaz.rules` | Rules engine: operative, skills, resolution, combat, expedition upkeep | Built |
-| — | Content: tables transcribed from the rulebook | Blocked on the missing pages |
+| `Packages/com.aaz.rules` | Rules engine: operative, skills, afflictions, resolution, combat, expedition upkeep | Built |
+| — | Content: terrain, encounter and item tables, Events | Blocked on the missing pages |
 
 Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) first — it explains the chosen
 shape (hex-crawl map plus diorama scenes) and why. [`docs/RULES.md`](docs/RULES.md)
@@ -22,10 +22,11 @@ the mobile performance budget.
 
 ## Still needed: the rest of the rulebook
 
-The supplied transcription cuts off mid-sentence in the Scavenging rules. Everything
-after that point is missing — all nine Exploration tables, every Encounter and Item
-table, the Echoes, Death and Injuries, Equipment, and XP. See the closing section of
-[`docs/RULES.md`](docs/RULES.md) for the full list.
+The complete core rules are now implemented. What is still missing is content: the
+nine terrain tables, the Encounter and Item tables, the Events, and the Locations.
+Most useful next are the **Weapons and Protective Suits summary tables**, which carry
+modifiers the combat engine already accepts but cannot yet be given. See the closing
+section of [`docs/RULES.md`](docs/RULES.md) for the full list.
 
 Note that file-sharing hosts are unreachable from this environment (Drive,
 pixeldrain and Dropbox are all refused by the network policy). Only GitHub is

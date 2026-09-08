@@ -84,44 +84,39 @@ namespace AAZ.Rules
         /// hit. Without a protective suit every Defense roll takes -1, which is why going
         /// unarmoured is a slow death rather than a quick one.
         /// </summary>
-        public static CheckResult Defend(Rng rng, int foeLevel, int suitModifier = 0, bool wearingSuit = false)
-        {
-            int modifier = suitModifier + (wearingSuit ? 0 : -1);
-            return Resolver.Check(rng, foeLevel, modifier);
-        }
+        public static CheckResult Defend(Rng rng, int foeLevel, Operative operative = null)
+            => Resolver.Check(rng, foeLevel, operative?.DefenseBonus ?? -1);
 
         /// <summary>
         /// One Escape roll covers the whole group; against mixed Levels use the highest.
         /// Failure means taking damage from every foe and trying again next turn.
+        /// <para>
+        /// Check <see cref="Operative.CanAttemptEscape"/> first: the Death Wish mark forbids
+        /// fleeing until the operative is nearly dead.
+        /// </para>
         /// </summary>
-        public static CheckResult Escape(Rng rng, int highestFoeLevel, SkillSet skills = null)
-        {
-            int modifier = skills?.Bonus(SkillId.Runner) ?? 0;
-            return Resolver.Check(rng, highestFoeLevel, modifier);
-        }
+        public static CheckResult Escape(Rng rng, int highestFoeLevel, Operative operative = null)
+            => Resolver.Check(rng, highestFoeLevel, operative?.EscapeBonus ?? 0);
 
         /// <summary>
         /// Attempted before combat begins. Success slips past the foe entirely, at the cost
         /// of not being able to scavenge the sector. Failure is worse than not trying: the
         /// foe acts first and fights at +1 Level.
         /// </summary>
-        public static CheckResult Sneak(Rng rng, int foeLevel, SkillSet skills = null)
-        {
-            int modifier = skills?.Bonus(SkillId.Stealth) ?? 0;
-            return Resolver.Check(rng, foeLevel, modifier);
-        }
+        public static CheckResult Sneak(Rng rng, int foeLevel, Operative operative = null)
+            => Resolver.Check(rng, foeLevel, operative?.StealthBonus ?? 0);
 
         /// <summary>Effective foe Level after a failed Stealth attempt.</summary>
         public static int LevelAfterFailedStealth(int foeLevel) => foeLevel + 1;
 
         /// <summary>
-        /// Rolls the foe's listed Surprise chance. Alertness reduces it by its rank, and a
+        /// Rolls the foe's listed Surprise chance. Danger Sense reduces it by its rank, and a
         /// chance reduced to zero or below cannot trigger at all.
         /// </summary>
-        public static bool EnemySurprises(Rng rng, int surpriseInSix, SkillSet skills = null)
+        public static bool EnemySurprises(Rng rng, int surpriseInSix, Operative operative = null)
         {
-            int alertness = skills?.Bonus(SkillId.Alertness) ?? 0;
-            return Resolver.ChanceInSix(rng, surpriseInSix - alertness);
+            int dangerSense = operative?.skills.Bonus(SkillId.DangerSense) ?? 0;
+            return Resolver.ChanceInSix(rng, surpriseInSix - dangerSense);
         }
 
         /// <summary>Attack modifier for the weapon in hand, before skill bonuses.</summary>

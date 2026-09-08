@@ -90,6 +90,9 @@ README.
 | Flat-top orientation and north–south axis | **Validated** — bearings 30/90/150/210/270/330, re-checked after the orientation fix |
 | Exploding dice expectation | **Validated** — 4.2035 measured against the analytic 4.2 |
 | Damage curve (divide-by-Level) | **Measured** — see the tables in `RULES.md` |
+| Flat-top orientation, second source | **Confirmed by the rules** — Echo 5's direction die reads N/NE/SE/S/SW/NW, the flat-top neighbour set |
+| Carry Limit model | **Corroborated** — all three pre-made operatives fit; Halyna is exactly 10/10 |
+| Exploration and Scavenging tables | **Measured** — frequencies and the sector-depletion curve in `RULES.md` |
 | C# compilation | **Not verified** — no .NET or Unity toolchain in this environment |
 | Shaders | **Not verified** — same reason |
 
@@ -98,11 +101,13 @@ never been through a compiler. Expect to fix import-time errors, not logic error
 
 ## Next, in order
 
-1. **The rest of the rulebook.** The supplied text cuts off in the Scavenging rules;
-   see the closing section of `RULES.md` for exactly what is missing.
-2. Transcribe the tables into `RandomTable` assets. Mechanical work, and the
-   validator catches transcription mistakes.
-3. Correct the twelve inferred skill names against the book.
-4. Wire the expedition loop on top of `Expedition` and the exploration tables.
+1. **Weapons and Protective Suits summary tables.** Highest value of what is still
+   missing: they carry the attack and defense modifiers the combat engine already
+   accepts but has nothing to feed it.
+2. The remaining content — terrain, encounter and item tables, Events, Locations.
+   See the closing section of `RULES.md`.
+3. Transcribe those into `RandomTable` assets. Mechanical work, and the validator
+   catches transcription mistakes.
+4. Wire the expedition loop on top of `Expedition` and the terrain tables.
 5. First diorama end-to-end for one location archetype, to price the art.
 6. Tune the volume profiles per region.
