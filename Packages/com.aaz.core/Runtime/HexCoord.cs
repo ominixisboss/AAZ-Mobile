@@ -102,14 +102,20 @@ namespace AAZ.Core
         }
 
         /// <summary>
-        /// Pointy-top layout onto the XZ ground plane, which is where an HD-2D map lives:
+        /// Flat-top layout onto the XZ ground plane, which is where an HD-2D map lives:
         /// the board lies flat and the camera looks down at it.
+        /// <para>
+        /// Flat-top is what the rulebook specifies, and it is not cosmetic. It puts two of
+        /// the six neighbours due north and due south (world bearings 30/90/150/210/270/330),
+        /// so an operative entering the grid from the south can walk straight up the map.
+        /// A pointy-top grid has no north-south step at all.
+        /// </para>
         /// </summary>
         public Vector3 ToWorld(float hexSize)
         {
             const float sqrt3 = 1.7320508f;
-            float wx = hexSize * sqrt3 * (q + r * 0.5f);
-            float wz = hexSize * 1.5f * r;
+            float wx = hexSize * 1.5f * q;
+            float wz = hexSize * sqrt3 * (r + q * 0.5f);
             return new Vector3(wx, 0f, wz);
         }
 
@@ -117,8 +123,8 @@ namespace AAZ.Core
         public static HexCoord FromWorld(Vector3 world, float hexSize)
         {
             const float sqrt3 = 1.7320508f;
-            float fq = (world.x / sqrt3 - world.z / 3f) / hexSize;
-            float fr = (world.z * (2f / 3f)) / hexSize;
+            float fq = (2f / 3f * world.x) / hexSize;
+            float fr = (-world.x / 3f + sqrt3 / 3f * world.z) / hexSize;
             return Round(fq, fr);
         }
 

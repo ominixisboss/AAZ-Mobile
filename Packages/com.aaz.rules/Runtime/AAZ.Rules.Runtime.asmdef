@@ -1,0 +1,14 @@
+{
+    "name": "AAZ.Rules.Runtime",
+    "rootNamespace": "AAZ.Rules",
+    "references": [ "AAZ.Core.Runtime" ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

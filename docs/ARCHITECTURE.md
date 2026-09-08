@@ -44,16 +44,16 @@ reversible decision right now and an expensive one later.
 ```
   Presentation   HD-2D map view · diorama scenes · UI      (Packages/com.aaz.hd2d)
   ───────────────────────────────────────────────────────
-  Game           expedition loop · encounters · character  (not written - needs the rules)
+  Rules          resolution · combat · upkeep · operative  (Packages/com.aaz.rules)
   ───────────────────────────────────────────────────────
-  Content        RandomTable assets transcribed from book  (not written - needs the rules)
+  Content        RandomTable assets transcribed from book  (not written - needs the tables)
   ───────────────────────────────────────────────────────
   Core           dice · tables · hex · map · save          (Packages/com.aaz.core)
 ```
 
-The two outer layers are built. The two middle ones are deliberately empty: they
-are the rules, and inventing them would mean writing a different game that happens
-to look similar.
+Three layers are built. Content is deliberately empty: the tables are the game's
+substance, they are data rather than code, and the part of the book carrying them
+has not been supplied.
 
 ## What is built
 
@@ -87,6 +87,9 @@ README.
 | --- | --- |
 | Dice distributions, d66 faces, determinism | **Validated** — reference implementation run in Python before porting |
 | Hex distance, rings, spirals, world round-trip, cube rounding | **Validated** — 2601 centre round-trips and 250k jittered points, zero failures |
+| Flat-top orientation and north–south axis | **Validated** — bearings 30/90/150/210/270/330, re-checked after the orientation fix |
+| Exploding dice expectation | **Validated** — 4.2035 measured against the analytic 4.2 |
+| Damage curve (divide-by-Level) | **Measured** — see the tables in `RULES.md` |
 | C# compilation | **Not verified** — no .NET or Unity toolchain in this environment |
 | Shaders | **Not verified** — same reason |
 
@@ -95,10 +98,11 @@ never been through a compiler. Expect to fix import-time errors, not logic error
 
 ## Next, in order
 
-1. **The design doc arrives.** Everything below is blocked on it.
-2. Transcribe the rulebook's tables into `RandomTable` assets. Mechanical work, and
-   the validator catches the mistakes.
-3. Model the character sheet and the resolution mechanic from the actual rules.
-4. Build the expedition loop: move, resolve, encounter, resource tick, end.
+1. **The rest of the rulebook.** The supplied text cuts off in the Scavenging rules;
+   see the closing section of `RULES.md` for exactly what is missing.
+2. Transcribe the tables into `RandomTable` assets. Mechanical work, and the
+   validator catches transcription mistakes.
+3. Correct the twelve inferred skill names against the book.
+4. Wire the expedition loop on top of `Expedition` and the exploration tables.
 5. First diorama end-to-end for one location archetype, to price the art.
 6. Tune the volume profiles per region.

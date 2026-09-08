@@ -1,0 +1,8 @@
+{
+  "name": "com.aaz.rules",
+  "displayName": "AAZ Rules",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Alone Against the Zone rules engine: operative, skills, resolution, combat and expedition upkeep.",
+  "dependencies": { "com.aaz.core": "0.1.0" }
+}
