@@ -1,0 +1,11 @@
+{
+  "name": "com.aaz.hd2d",
+  "displayName": "AAZ HD-2D",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "HD-2D rendering layer for URP: camera-facing lit pixel-art sprites that receive real shadows, a tilt-shift depth-of-field renderer feature, and a fixed-angle diorama camera rig.",
+  "keywords": [ "hd-2d", "urp", "sprite", "pixel-art", "tilt-shift" ],
+  "dependencies": {
+    "com.unity.render-pipelines.universal": "14.0.0"
+  }
+}
