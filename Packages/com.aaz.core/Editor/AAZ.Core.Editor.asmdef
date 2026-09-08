@@ -1,0 +1,14 @@
+{
+    "name": "AAZ.Core.Editor",
+    "rootNamespace": "AAZ.Core.Editor",
+    "references": [ "AAZ.Core.Runtime" ],
+    "includePlatforms": [ "Editor" ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

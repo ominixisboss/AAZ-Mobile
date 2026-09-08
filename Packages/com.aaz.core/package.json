@@ -1,0 +1,9 @@
+{
+  "name": "com.aaz.core",
+  "displayName": "AAZ Core",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Rules-agnostic primitives for a solo tabletop hex-crawl: deterministic dice, authorable random tables (d6/2d6/d66/d100), axial hex coordinates and a fog-of-war hex map.",
+  "keywords": [ "tabletop", "solo-rpg", "hex", "dice", "random-tables" ],
+  "dependencies": {}
+}
