@@ -69,13 +69,28 @@ make -j"$(nproc)" generated
 # to build the whole ROM, because the ROM build is broken in this fork:
 # src/platform/bios.c is SDL port code and does not compile for the GBA target.
 log "Generating binary assets referenced by INCBIN"
-grep -rhoE 'INCBIN_[A-Z0-9]+\("[^"]+"' src include data \
-    | sed -E 's/.*\("//; s/"$//' | sort -u > "$WORK_DIR/.incbin-targets"
+# Note the [[:space:]]* after the paren: the sources contain both
+# INCBIN_U8("...") and INCBIN_U8( "..."), and missing the spaced form leaves a
+# handful of assets ungenerated that only surface hundreds of files into the
+# ninja build.
+TARGETS="$WORK_DIR/.incbin-targets"
+grep -rhoE 'INCBIN_[A-Z0-9]+\([[:space:]]*"[^"]+"' src include data \
+    | sed -E 's/.*"([^"]+)"/\1/' | sort -u > "$TARGETS"
 grep -rhoE '\.incbin[[:space:]]+"[^"]+"' data sound \
-    | sed -E 's/.*"([^"]+)"/\1/' | sort -u >> "$WORK_DIR/.incbin-targets"
-sort -u -o "$WORK_DIR/.incbin-targets" "$WORK_DIR/.incbin-targets"
-echo "$(wc -l < "$WORK_DIR/.incbin-targets") asset targets"
-xargs -a "$WORK_DIR/.incbin-targets" make -j"$(nproc)" >/dev/null
+    | sed -E 's/.*"([^"]+)"/\1/' | sort -u >> "$TARGETS"
+sort -u -o "$TARGETS" "$TARGETS"
+echo "$(wc -l < "$TARGETS") asset targets"
+xargs -a "$TARGETS" make -j"$(nproc)" >/dev/null
+
+# Fail here, with the list, rather than several minutes into the ninja build.
+missing=$(while read -r asset; do
+    [ -f "$asset" ] || echo "$asset"
+done < "$TARGETS")
+if [ -n "$missing" ]; then
+    echo "ERROR: assets still missing after generation:" >&2
+    echo "$missing" | head -20 >&2
+    exit 1
+fi
 
 log "Assembling the APK"
 BUILD_LOG="${BUILD_LOG:-$WORK_DIR/android-build.log}"
