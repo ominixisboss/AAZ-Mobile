@@ -38,11 +38,18 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # packages:'' is required. The action otherwise defaults to installing
+      # "tools", a package that has been removed from the SDK repository, and
+      # sdkmanager exits 1 on "Failed to find package 'tools'".
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       - name: Install NDK and CMake
         run: |
-          sdkmanager --install "ndk;${NDK_VERSION}" "cmake;${SDK_CMAKE_VERSION}"
+          sdkmanager --install "platform-tools" \
+                               "ndk;${NDK_VERSION}" \
+                               "cmake;${SDK_CMAKE_VERSION}"
 
       - name: Build APK
         run: ./android-build/build-android.sh
