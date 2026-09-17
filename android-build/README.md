@@ -45,16 +45,53 @@ The APK lands at
 `.github/workflows/pokeemerald-android.yml` runs the same script on CI and
 uploads the APK as a build artifact.
 
+## Status
+
+The APK builds. Verified in CI on 2026-09-17
+([run 8](https://github.com/ominixisboss/AAZ-Mobile/actions/runs/35282350977)),
+producing a 14.7 MB `app-debug.apk` from a clean clone.
+
+It has **not** been run on a device or emulator from here, so "builds" is the
+claim, not "plays". Installing it is the next step.
+
 ## Fixes this harness applies on top of the fork
 
-- **The documented patch command does not work.** The fork's README says to run
-  `git -C android/SDL2 apply ../patches/sdl2-android-lifecycle.patch`, but that
-  patch is generated with zero context lines, which `git apply` rejects
-  outright. `--unidiff-zero` is required. The script also reverse-checks first
-  so re-running it on an existing checkout is a no-op rather than a failure.
-- The script builds the decomp's host tools (`make tools`) before invoking
-  Gradle. The CMake build shells out to `tools/preproc/preproc` for every
-  translation unit and does not build it itself.
+The fork's Android target is not covered by its own CI, and none of the
+following is mentioned in its README. Each was found by building it:
+
+1. **The documented patch command cannot work.** The README says to run
+   `git -C android/SDL2 apply ../patches/sdl2-android-lifecycle.patch`, but that
+   patch is generated with zero context lines, which `git apply` rejects
+   outright. `--unidiff-zero` is required. The script also reverse-checks first,
+   so re-running against an existing checkout is a no-op rather than an error.
+2. **`make tools` is never run.** The CMake build shells out to
+   `tools/preproc/preproc` for every translation unit but does not build it.
+3. **`make generated` is never run.** `global.h` reaches `map_groups.h`, which
+   `tools/mapjson` generates and which is not checked in, so otherwise every
+   translation unit fails preprocessing.
+4. **Binary assets are never generated.** Every `INCBIN_*()` names a `.4bpp` /
+   `.gbapal` / `.lz` that `gbagfx` derives from the checked-in PNGs. This fork
+   predates pokeemerald's `build/assets` layout -- its `preproc` has no `-g`
+   flag -- so they have to land in the source tree. Note that a single
+   `INCBIN_U32()` takes several comma-separated paths spanning many lines, so
+   scanning for the macro line by line silently misses most of them; the script
+   matches any quoted asset-directory path instead.
+5. **Map includes are never generated.** The per-map `header.inc` /
+   `events.inc` / `connections.inc` that `mapjson` derives from each `map.json`
+   are prerequisites of the ROM's `maps.o`, not members of `AUTO_GEN_TARGETS`.
+   Without them the link fails on undefined `gMapGroups`.
+6. **Song assembly is never generated.** `sound/songs/midi/` ships 420 `.mid`
+   files and no `.s` at all; `mid2agb` produces them. Without them the link
+   fails on every `se_*` and `mus_*` symbol.
+
+Items 5 and 6 must happen *before* Gradle, because the CMake globs those files
+at configure time. That also means a rebuild in an already-dirty tree can
+succeed where a clean checkout fails.
+
+Note also that `make modern` -- the obvious way to generate everything at once
+-- does not work in this fork: the ROM build fails because `src/platform/bios.c`
+is SDL port code that will not compile for the GBA target. That is why the
+script asks make for precisely the files it needs.
 
 ## Legal
 
