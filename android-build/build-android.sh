@@ -58,6 +58,25 @@ make -j"$(nproc)" tools
 log "Generating the decomp's generated headers and sources"
 make -j"$(nproc)" generated
 
+# INCBIN_*() in the C sources and .incbin in the assembly reference binary
+# assets (.4bpp, .gbapal, .lz, .bin, cries...) that gbagfx and friends generate
+# from the checked-in PNGs and WAVs. This fork predates pokeemerald's
+# build/assets layout -- its preproc has no -g flag -- so the assets have to
+# land in the source tree, beside their sources, and the Android CMake build
+# generates none of them.
+#
+# We ask make for exactly the referenced files rather than running `make modern`
+# to build the whole ROM, because the ROM build is broken in this fork:
+# src/platform/bios.c is SDL port code and does not compile for the GBA target.
+log "Generating binary assets referenced by INCBIN"
+grep -rhoE 'INCBIN_[A-Z0-9]+\("[^"]+"' src include data \
+    | sed -E 's/.*\("//; s/"$//' | sort -u > "$WORK_DIR/.incbin-targets"
+grep -rhoE '\.incbin[[:space:]]+"[^"]+"' data sound \
+    | sed -E 's/.*"([^"]+)"/\1/' | sort -u >> "$WORK_DIR/.incbin-targets"
+sort -u -o "$WORK_DIR/.incbin-targets" "$WORK_DIR/.incbin-targets"
+echo "$(wc -l < "$WORK_DIR/.incbin-targets") asset targets"
+xargs -a "$WORK_DIR/.incbin-targets" make -j"$(nproc)" >/dev/null
+
 log "Assembling the APK"
 BUILD_LOG="${BUILD_LOG:-$WORK_DIR/android-build.log}"
 if ! ./android/SDL2/android-project/gradlew -p android :app:assembleDebug \
