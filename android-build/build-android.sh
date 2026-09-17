@@ -59,7 +59,15 @@ log "Generating the decomp's generated headers and sources"
 make -j"$(nproc)" generated
 
 log "Assembling the APK"
-./android/SDL2/android-project/gradlew -p android :app:assembleDebug
+BUILD_LOG="${BUILD_LOG:-$WORK_DIR/android-build.log}"
+if ! ./android/SDL2/android-project/gradlew -p android :app:assembleDebug \
+        2>&1 | tee "$BUILD_LOG"; then
+    # The ninja build emits ~1000 lines of progress; surface just the
+    # diagnostics so a CI failure is readable without downloading the log.
+    log "BUILD FAILED -- compiler diagnostics:"
+    grep -E '(fatal )?error:|^\s*FAILED:' "$BUILD_LOG" | sort -u | head -50
+    exit 1
+fi
 
 APK="android/app/build/outputs/apk/debug/app-debug.apk"
 log "Done: $WORK_DIR/$APK"

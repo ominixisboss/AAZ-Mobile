@@ -70,6 +70,7 @@ jobs:
         with:
           name: build-logs
           path: |
+            .pokeemerald-multiplatform/android-build.log
             .pokeemerald-multiplatform/android/app/build/outputs/logs/**
             .pokeemerald-multiplatform/android/app/.cxx/**/*.log
           if-no-files-found: ignore
