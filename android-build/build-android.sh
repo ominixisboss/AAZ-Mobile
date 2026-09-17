@@ -69,16 +69,18 @@ make -j"$(nproc)" generated
 # to build the whole ROM, because the ROM build is broken in this fork:
 # src/platform/bios.c is SDL port code and does not compile for the GBA target.
 log "Generating binary assets referenced by INCBIN"
-# Note the [[:space:]]* after the paren: the sources contain both
-# INCBIN_U8("...") and INCBIN_U8( "..."), and missing the spaced form leaves a
-# handful of assets ungenerated that only surface hundreds of files into the
-# ninja build.
-TARGETS="$WORK_DIR/.incbin-targets"
-grep -rhoE 'INCBIN_[A-Z0-9]+\([[:space:]]*"[^"]+"' src include data \
-    | sed -E 's/.*"([^"]+)"/\1/' | sort -u > "$TARGETS"
+# Scanning for INCBIN_*(...) is not enough: a single INCBIN_U32() takes several
+# comma-separated paths spanning many lines, so a line-oriented match catches
+# only the first of each. Match any quoted asset-directory path instead, which
+# is independent of the macro syntax. Paths that are already checked-in sources
+# (.png, .pal, .aif) are simply no-ops for make; non-asset extensions are
+# dropped because some have no make rule at all.
+TARGETS="$WORK_DIR/.asset-targets"
+grep -rhoE '"(graphics|data|sound)/[^"]*\.[a-z0-9.]+"' src include data sound \
+    | tr -d '"' | sort -u > "$TARGETS"
 grep -rhoE '\.incbin[[:space:]]+"[^"]+"' data sound \
-    | sed -E 's/.*"([^"]+)"/\1/' | sort -u >> "$TARGETS"
-sort -u -o "$TARGETS" "$TARGETS"
+    | sed -E 's/.*"([^"]+)"/\1/' >> "$TARGETS"
+grep -vE '\.(h|c|inc|json|txt|mk|s)$' "$TARGETS" | sort -u -o "$TARGETS"
 echo "$(wc -l < "$TARGETS") asset targets"
 xargs -a "$TARGETS" make -j"$(nproc)" >/dev/null
 
