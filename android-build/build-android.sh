@@ -94,6 +94,30 @@ if [ -n "$missing" ]; then
     exit 1
 fi
 
+# Two more sets of generated sources that `make generated` does not cover,
+# because upstream they are prerequisites of the ROM's maps.o / song objects
+# rather than members of AUTO_GEN_TARGETS. Both must exist BEFORE Gradle runs,
+# since the CMake file globs them at configure time.
+#
+# Without these the whole game compiles and only the final link fails, with
+# undefined gMapGroups (per-map .inc) and undefined se_*/mus_* (song .s).
+log "Generating map .inc files"
+MAP_INCS="$WORK_DIR/.map-incs"
+for dir in data/maps/*/; do
+    [ -f "$dir/map.json" ] || continue
+    printf '%sheader.inc\n%sevents.inc\n%sconnections.inc\n' "$dir" "$dir" "$dir"
+done > "$MAP_INCS"
+printf 'data/maps/headers.inc\ndata/maps/groups.inc\ndata/maps/connections.inc\n' >> "$MAP_INCS"
+printf 'data/maps/events.inc\ndata/layouts/layouts.inc\ndata/layouts/layouts_table.inc\n' >> "$MAP_INCS"
+echo "$(wc -l < "$MAP_INCS") map includes"
+xargs -a "$MAP_INCS" make -j"$(nproc)" >/dev/null
+
+# The songs ship as .mid only; mid2agb produces the .s that defines se_* / mus_*.
+log "Generating song assembly from MIDI"
+ls sound/songs/midi/*.mid | sed 's/\.mid$/.s/' > "$WORK_DIR/.song-asm"
+echo "$(wc -l < "$WORK_DIR/.song-asm") songs"
+xargs -a "$WORK_DIR/.song-asm" make -j"$(nproc)" >/dev/null
+
 log "Assembling the APK"
 BUILD_LOG="${BUILD_LOG:-$WORK_DIR/android-build.log}"
 if ! ./android/SDL2/android-project/gradlew -p android :app:assembleDebug \
