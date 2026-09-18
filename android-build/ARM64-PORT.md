@@ -83,9 +83,32 @@ The cost is on the C side: each interpreter must add `__script_base` where it
 currently dereferences a raw script pointer -- `script.c`'s `ScriptReadWord`
 and the battle script, battle anim and AI command readers.
 
+## Progress
+
+| Step | Slots | State |
+| --- | ---: | --- |
+| map data (`mapjson`, `asm/macros/map.inc`) | 8,493 | done |
+| map script tables (`map_script` macros) | 832 | done |
+| sound data (`m4a.inc`, `music_voice.inc`) | 3,774 | done |
+| song headers (`tools/mid2agb`) | ~1,700 | next |
+| in-track song pointers (m4a player) | ~9,300 | bytecode |
+| script bytecode (`event_scripts` and friends) | 24,763 | bytecode |
+| **converted so far** | **13,099 / 48,316** | **27%** |
+
+Each step is verified three ways: the arm64 object has zero remaining ABS32,
+the arm32 object is byte-for-byte unchanged in relocation count, and the
+resulting field offsets are compared against what the aarch64 C compiler
+actually produces rather than hand-computed.
+
+Watch for hardcoded structure sizes, not just pointer emissions. `voice_group`
+indexed backwards by a literal `0xC`, which is `sizeof(struct ToneData)` on a
+32-bit target; on arm64 the compiler reports 24. Measured stride after the fix
+is 12 on arm32 and 24 on arm64, with the sample pointer at offset 4 and 8
+respectively -- matching `offsetof` exactly.
+
 ## Status
 
-Analysis complete and verified. Implementation not started.
+Implementation in progress; the 32-bit build stays green throughout.
 
 The honest caveat: this has to be validated by running the game, and this
 environment has no device or emulator (`dl.google.com` is blocked by the

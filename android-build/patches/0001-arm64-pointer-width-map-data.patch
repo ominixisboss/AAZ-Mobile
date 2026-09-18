@@ -7,6 +7,48 @@ index 95bb4e31b..ef463499f 100644
  	.include "asm/macros/asm.inc"
  	.include "asm/macros/function.inc"
  	.include "asm/macros/movement.inc"
+diff --git a/asm/macros/m4a.inc b/asm/macros/m4a.inc
+index d6e279a6d..182355579 100644
+--- a/asm/macros/m4a.inc
++++ b/asm/macros/m4a.inc
+@@ -1,25 +1,33 @@
++	.include "asm/macros/ptr.inc"
+ 	.macro song label:req, music_player:req, unknown:req
+-	.int \label
++	ptr \label
+ 	.short \music_player
+ 	.short \unknown
+ 	.endm
+ 
+ 	.macro music_player info_struct:req, track_struct:req, num_tracks:req, unknown:req
+-	.int \info_struct
+-	.int \track_struct
++	ptr \info_struct
++	ptr \track_struct
+ 	.byte \num_tracks
+ 	.space 1  /* Padding*/
+ 	.short \unknown
+ 	.endm
+ 
+ 	.macro voice_group label:req, starting_note
+-	.align 2
++	palign
+ 	.ifb \starting_note
+ 		.global voicegroup_\label 
+ 		voicegroup_\label:
++	.else
++	// Indexes backwards by sizeof(struct ToneData), which is 12 bytes on a
++	// 32-bit target and 24 on a 64-bit one: 4 u8, 4 pad, an 8-byte pointer,
++	// 4 u8, 4 pad. Verified against the compiler, not hand-computed.
++	.ifdef PTR64
++		.set voicegroup_\label, . - \starting_note * 0x18
+ 	.else
+ 		.set voicegroup_\label, . - \starting_note * 0xC
+ 	.endif
++	.endif
+ 	.endm
+ 
+ 	.macro keysplit label:req, starting_note
 diff --git a/asm/macros/map.inc b/asm/macros/map.inc
 index 6e91c390c..02ff367d3 100644
 --- a/asm/macros/map.inc
@@ -73,12 +115,70 @@ index 6e91c390c..02ff367d3 100644
  	reset_map_events
  	.endm
  
+diff --git a/asm/macros/music_voice.inc b/asm/macros/music_voice.inc
+index 04a734324..7f4fbb77f 100644
+--- a/asm/macros/music_voice.inc
++++ b/asm/macros/music_voice.inc
+@@ -1,3 +1,4 @@
++	.include "asm/macros/ptr.inc"
+ 	.macro voice_directsound base_midi_key:req, pan:req, sample_data_pointer:req, attack:req, decay:req, sustain:req, release:req
+ 	.byte 0
+ 	_voice_directsound \base_midi_key, \pan, \sample_data_pointer, \attack, \decay, \sustain, \release
+@@ -21,7 +22,7 @@
+ 	.else
+ 	.byte 0
+ 	.endif
+-	.int \sample_data_pointer
++	ptr \sample_data_pointer
+ 	.byte \attack
+ 	.byte \decay
+ 	.byte \sustain
+@@ -95,7 +96,7 @@
+ 	.byte 0
+ 	.endif
+ 	.byte 0
+-	.int \wave_samples_pointer
++	ptr \wave_samples_pointer
+ 	.byte (\attack  & 0x7)
+ 	.byte (\decay   & 0x7)
+ 	.byte (\sustain & 0xF)
+@@ -129,24 +130,24 @@
+ 
+ 	.macro voice_keysplit voice_group_pointer:req, keysplit_table_pointer:req
+ 	.byte 0x40, 0, 0, 0
+-	.int \voice_group_pointer
+-	.int \keysplit_table_pointer
++	ptr \voice_group_pointer
++	ptr \keysplit_table_pointer
+ 	.endm
+ 
+ 	.macro voice_keysplit_all voice_group_pointer:req
+ 	.byte 0x80, 0, 0, 0
+-	.int \voice_group_pointer
+-	.int 0
++	ptr \voice_group_pointer
++	ptr 0
+ 	.endm
+ 
+ 	.macro cry sample:req
+ 	.byte 0x20, 60, 0, 0
+-	.int \sample
++	ptr \sample
+ 	.byte 0xff, 0, 0xff, 0
+ 	.endm
+ 
+ 	.macro cry_reverse sample:req
+ 	.byte 0x30, 60, 0, 0
+-	.int \sample
++	ptr \sample
+ 	.byte 0xff, 0, 0xff, 0
+ 	.endm
 diff --git a/asm/macros/ptr.inc b/asm/macros/ptr.inc
 new file mode 100644
-index 000000000..0452c0cf1
+index 000000000..d0ba002bd
 --- /dev/null
 +++ b/asm/macros/ptr.inc
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,36 @@
 +// Pointer emission that adapts to the target's pointer width.
 +//
 +// The decomp emits data pointers as .4byte/.int, which is correct for a 32-bit
@@ -90,6 +190,12 @@ index 000000000..0452c0cf1
 +// keeps the original 32-bit output byte for byte, so the existing armeabi-v7a
 +// build needs no changes. The .balign inside `ptr` mirrors exactly what the C
 +// compiler does when it aligns a pointer field, so struct layouts agree.
++
++// Include guard: this file is pulled in from asm/macros.inc and directly
++// from the sound macros, and gas rejects a duplicate .macro definition.
++	.ifdef PTR_INC_INCLUDED
++	.else
++	.equiv PTR_INC_INCLUDED, 1
 +
 +	.macro palign
 +	.ifdef PTR64
@@ -107,6 +213,8 @@ index 000000000..0452c0cf1
 +	.4byte \label
 +	.endif
 +	.endm
++
++	.endif
 diff --git a/tools/mapjson/mapjson.cpp b/tools/mapjson/mapjson.cpp
 index 8d8ec4e4e..764b71793 100644
 --- a/tools/mapjson/mapjson.cpp
