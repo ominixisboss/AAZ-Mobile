@@ -90,10 +90,10 @@ and the battle script, battle anim and AI command readers.
 | map data (`mapjson`, `asm/macros/map.inc`) | 8,493 | done |
 | map script tables (`map_script` macros) | 832 | done |
 | sound data (`m4a.inc`, `music_voice.inc`) | 3,774 | done |
-| song headers (`tools/mid2agb`) | ~1,700 | next |
-| in-track song pointers (m4a player) | ~9,300 | bytecode |
+| song headers (`tools/mid2agb`) | 2,333 | done |
+| in-track song pointers (m4a player) | 8,659 | bytecode |
 | script bytecode (`event_scripts` and friends) | 24,763 | bytecode |
-| **converted so far** | **13,099 / 48,316** | **27%** |
+| **converted so far** | **15,432 / 48,316** | **32%** |
 
 Each step is verified three ways: the arm64 object has zero remaining ABS32,
 the arm32 object is byte-for-byte unchanged in relocation count, and the

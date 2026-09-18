@@ -1,12 +1,16 @@
-diff --git a/asm/macros.inc b/asm/macros.inc
-index 95bb4e31b..ef463499f 100644
---- a/asm/macros.inc
-+++ b/asm/macros.inc
-@@ -1,3 +1,4 @@
-+	.include "asm/macros/ptr.inc"
- 	.include "asm/macros/asm.inc"
- 	.include "asm/macros/function.inc"
- 	.include "asm/macros/movement.inc"
+diff --git a/android/app/src/main/cpp/CMakeLists.txt b/android/app/src/main/cpp/CMakeLists.txt
+index 6c607dd85..3f3716a2c 100644
+--- a/android/app/src/main/cpp/CMakeLists.txt
++++ b/android/app/src/main/cpp/CMakeLists.txt
+@@ -53,7 +53,7 @@ foreach(SOURCE IN LISTS DATA_ASM SONG_ASM)
+         add_custom_command(
+             OUTPUT "${OUTPUT}"
+             COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUTPUT_DIR}"
+-            COMMAND /bin/sh -c "sed -e 's/\\.4byte/\\.word/g;s/\\.2byte/\\.short/g' '${SOURCE}' > '${OUTPUT}.s' && '${ARM_NONE_EABI_AS}' -march=armv7-a -I'${ROOT}/sound' -o '${OUTPUT}' '${OUTPUT}.s'"
++            COMMAND /bin/sh -c "sed -e 's/\\.4byte/\\.word/g;s/\\.2byte/\\.short/g' '${SOURCE}' > '${OUTPUT}.s' && '${ARM_NONE_EABI_AS}' -march=armv7-a -I'${ROOT}' -I'${ROOT}/sound' -o '${OUTPUT}' '${OUTPUT}.s'"
+             DEPENDS "${SOURCE}"
+             VERBATIM)
+     else()
 diff --git a/asm/macros/m4a.inc b/asm/macros/m4a.inc
 index d6e279a6d..182355579 100644
 --- a/asm/macros/m4a.inc
@@ -332,3 +336,43 @@ index 8d8ec4e4e..764b71793 100644
      }
  
      return text.str();
+diff --git a/tools/mid2agb/agb.cpp b/tools/mid2agb/agb.cpp
+index 780f746e1..906b1d506 100644
+--- a/tools/mid2agb/agb.cpp
++++ b/tools/mid2agb/agb.cpp
+@@ -45,7 +45,8 @@ static int s_memaccParam2;
+ 
+ void PrintAgbHeader()
+ {
+-    std::fprintf(g_outputFile, "\t.include \"MPlayDef.s\"\n\n");
++    std::fprintf(g_outputFile, "\t.include \"MPlayDef.s\"\n");
++    std::fprintf(g_outputFile, "\t.include \"asm/macros/ptr.inc\"\n\n");
+     std::fprintf(g_outputFile, "\t.equ\t%s_grp, voicegroup%s\n", g_asmLabel.c_str(), g_voiceGroup.c_str());
+     std::fprintf(g_outputFile, "\t.equ\t%s_pri, %u\n", g_asmLabel.c_str(), g_priority);
+ 
+@@ -529,19 +530,22 @@ void PrintAgbFooter()
+     int trackCount = g_agbTrack - 1;
+ 
+     //std::fprintf(g_outputFile, "\n@******************************************************@\n");
+-    std::fprintf(g_outputFile, "\t.align\t2\n");
++    // struct SongHeader starts with four u8 and then a pointer, so on a
++    // 64-bit target the struct itself has to be 8-aligned for that pointer
++    // to land where the compiler puts it.
++    std::fprintf(g_outputFile, "\tpalign\n");
+     std::fprintf(g_outputFile, "\n%s:\n", g_asmLabel.c_str());
+     std::fprintf(g_outputFile, "\t.byte\t%u\n", trackCount);
+     std::fprintf(g_outputFile, "\t.byte\t%u\n", 0);
+     std::fprintf(g_outputFile, "\t.byte\t%s_pri\n", g_asmLabel.c_str());
+     std::fprintf(g_outputFile, "\t.byte\t%s_rev\n", g_asmLabel.c_str());
+     std::fprintf(g_outputFile, "\n");
+-    std::fprintf(g_outputFile, "\t.4byte\t%s_grp\n", g_asmLabel.c_str());
++    std::fprintf(g_outputFile, "\tptr\t%s_grp\n", g_asmLabel.c_str());
+     std::fprintf(g_outputFile, "\n");
+ 
+     // track pointers
+     for (int i = 1; i <= trackCount; i++)
+-        std::fprintf(g_outputFile, "\t.4byte\t%s_%u\n", g_asmLabel.c_str(), i);
++        std::fprintf(g_outputFile, "\tptr\t%s_%u\n", g_asmLabel.c_str(), i);
+ 
+     std::fprintf(g_outputFile, "\n\t.end\n");
+ }
