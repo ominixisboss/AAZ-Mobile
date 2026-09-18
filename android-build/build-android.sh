@@ -16,6 +16,8 @@ WORK_DIR="${WORK_DIR:-$PWD/.pokeemerald-multiplatform}"
 REQUIRED_NDK="26.3.11579264"
 REQUIRED_CMAKE="3.22.1"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 log() { printf '\n==> %s\n' "$*"; }
 
 : "${ANDROID_HOME:?ANDROID_HOME must point at an Android SDK}"
@@ -44,6 +46,21 @@ if git -C android/SDL2 apply -R --check ../patches/sdl2-android-lifecycle.patch 
 else
     git -C android/SDL2 apply --unidiff-zero ../patches/sdl2-android-lifecycle.patch
 fi
+
+# arm64 port patches. These are no-ops for the existing armeabi-v7a build --
+# the pointer macros key off a PTR64 symbol that is only defined when
+# assembling for a 64-bit target -- so applying them unconditionally is safe.
+# See android-build/ARM64-PORT.md for what each one does and why.
+log "Applying arm64 port patches"
+for patch in "$SCRIPT_DIR"/patches/*.patch; do
+    [ -e "$patch" ] || continue
+    name=$(basename "$patch")
+    if git apply -R --check "$patch" 2>/dev/null; then
+        echo "  $name already applied"
+    else
+        git apply "$patch" && echo "  applied $name"
+    fi
+done
 
 # The CMake build shells out to tools/preproc/preproc for every .c and .s file.
 log "Building the decomp's host tools"

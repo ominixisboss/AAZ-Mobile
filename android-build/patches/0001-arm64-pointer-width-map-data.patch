@@ -1,0 +1,235 @@
+diff --git a/asm/macros/map.inc b/asm/macros/map.inc
+index 6e91c390c..02ff367d3 100644
+--- a/asm/macros/map.inc
++++ b/asm/macros/map.inc
+@@ -9,14 +9,14 @@
+ 	/* Defines a map script. 'type' is any MAP_SCRIPT_* constant (see include/constants/map_scripts.h)*/
+ 	.macro map_script type:req, script:req
+ 	.byte \type
+-	.int \script
++	ptr \script
+ 	.endm
+ 
+ 	/* Defines an entry in a map script table (for either ON_WARP_INTO_MAP_TABLE or ON_FRAME_TABLE)*/
+ 	.macro map_script_2 var:req, compare:req, script:req
+ 	.short \var
+ 	.short \compare
+-	.int \script
++	ptr \script
+ 	.endm
+ 
+ 	/* Defines an object event template for map data, to be used by a normal object. Mirrors the struct layout of ObjectEventTemplate in include/global.fieldmap.h*/
+@@ -32,7 +32,7 @@
+ 	.space 1  /* Padding*/
+ 	.short \trainer_type
+ 	.short \sight_radius_tree_etc
+-	.int \script
++	ptr \script
+ 	.short \event_flag
+ 	.space 2  /* Padding*/
+ 	inc _num_npcs
+@@ -72,7 +72,7 @@
+ 	.2byte \var
+ 	.2byte \varValue
+ 	.space 2  /* Padding*/
+-	.4byte \script
++	ptr \script
+ 	inc _num_traps
+ 	.endm
+ 
+@@ -90,10 +90,13 @@
+ 	.byte \kind
+ 	.space 2  /* Padding*/
+ 	.if \kind != BG_EVENT_HIDDEN_ITEM
+-		.int \arg6
++		ptr \arg6
+ 	.else
+ 		.short \arg6
+ 		.short \arg7
++		.ifdef PTR64
++		.space 4
++		.endif
+ 	.endif
+ 	inc _num_signs
+ 	.endm
+@@ -116,7 +119,10 @@
+ 	/* Defines the table of event data for a map. Mirrors the struct layout of MapEvents in include/global.fieldmap.h*/
+ 	.macro map_events npcs:req, warps:req, traps:req, signs:req
+ 	.byte _num_npcs, _num_warps, _num_traps, _num_signs
+-	.int \npcs, \warps, \traps, \signs
++	ptr \npcs
++	ptr \warps
++	ptr \traps
++	ptr \signs
+ 	reset_map_events
+ 	.endm
+ 
+diff --git a/asm/macros/ptr.inc b/asm/macros/ptr.inc
+new file mode 100644
+index 000000000..0452c0cf1
+--- /dev/null
++++ b/asm/macros/ptr.inc
+@@ -0,0 +1,28 @@
++// Pointer emission that adapts to the target's pointer width.
++//
++// The decomp emits data pointers as .4byte/.int, which is correct for a 32-bit
++// target but produces R_AARCH64_ABS32 relocations on arm64 -- and an absolute
++// 32-bit relocation against a symbol cannot exist in a shared object, which is
++// what an Android app always is.
++//
++// Assemble with --defsym PTR64=1 for a 64-bit target; leaving it undefined
++// keeps the original 32-bit output byte for byte, so the existing armeabi-v7a
++// build needs no changes. The .balign inside `ptr` mirrors exactly what the C
++// compiler does when it aligns a pointer field, so struct layouts agree.
++
++	.macro palign
++	.ifdef PTR64
++	.balign 8
++	.else
++	.balign 4
++	.endif
++	.endm
++
++	.macro ptr label:req
++	.ifdef PTR64
++	.balign 8
++	.xword \label
++	.else
++	.4byte \label
++	.endif
++	.endm
+diff --git a/data/map_events.s b/data/map_events.s
+index cfa5799d3..273ec3ce5 100644
+--- a/data/map_events.s
++++ b/data/map_events.s
+@@ -1,3 +1,4 @@
++	.include "asm/macros/ptr.inc"
+ #include "constants/global.h"
+ #include "constants/event_bg.h"
+ #include "constants/event_object_movement.h"
+diff --git a/data/maps.s b/data/maps.s
+index 9d9ac2101..d4b2c6056 100644
+--- a/data/maps.s
++++ b/data/maps.s
+@@ -1,3 +1,4 @@
++	.include "asm/macros/ptr.inc"
+ #include "constants/global.h"
+ #include "constants/layouts.h"
+ #include "constants/map_types.h"
+diff --git a/tools/mapjson/mapjson.cpp b/tools/mapjson/mapjson.cpp
+index 8d8ec4e4e..764b71793 100644
+--- a/tools/mapjson/mapjson.cpp
++++ b/tools/mapjson/mapjson.cpp
+@@ -139,24 +139,24 @@ string generate_map_header_text(Json map_data, Json layouts_data) {
+     string mapName = json_to_string(map_data, "name");
+     text << get_generated_warning("data/maps/" + mapName + "/map.json", true);
+ 
+-    text << mapName << ":\n"
+-         << "\t.4byte " << json_to_string(layout, "name") << "\n";
++    text << "\tpalign\n" << mapName << ":\n"
++         << "\tptr " << json_to_string(layout, "name") << "\n";
+ 
+     if (map_data.object_items().find("shared_events_map") != map_data.object_items().end())
+-        text << "\t.4byte " << json_to_string(map_data, "shared_events_map") << "_MapEvents\n";
++        text << "\tptr " << json_to_string(map_data, "shared_events_map") << "_MapEvents\n";
+     else
+-        text << "\t.4byte " << mapName << "_MapEvents\n";
++        text << "\tptr " << mapName << "_MapEvents\n";
+ 
+     if (map_data.object_items().find("shared_scripts_map") != map_data.object_items().end())
+-        text << "\t.4byte " << json_to_string(map_data, "shared_scripts_map") << "_MapScripts\n";
++        text << "\tptr " << json_to_string(map_data, "shared_scripts_map") << "_MapScripts\n";
+     else
+-        text << "\t.4byte " << mapName << "_MapScripts\n";
++        text << "\tptr " << mapName << "_MapScripts\n";
+ 
+     if (map_data.object_items().find("connections") != map_data.object_items().end()
+      && map_data["connections"].array_items().size() > 0 && json_to_string(map_data, "connections_no_include", true) != "TRUE")
+-        text << "\t.4byte " << mapName << "_MapConnections\n";
++        text << "\tptr " << mapName << "_MapConnections\n";
+     else
+-        text << "\t.4byte NULL\n";
++        text << "\tptr NULL\n";
+ 
+     text << "\t.2byte " << json_to_string(map_data, "music") << "\n"
+          << "\t.2byte " << json_to_string(layout, "id") << "\n"
+@@ -204,7 +204,7 @@ string generate_map_connections_text(Json map_data) {
+ 
+     text << "\n" << mapName << "_MapConnections:\n"
+          << "\t.4byte " << map_data["connections"].array_items().size() << "\n"
+-         << "\t.4byte " << mapName << "_MapConnectionsList\n\n";
++         << "\tptr " << mapName << "_MapConnectionsList\n\n";
+ 
+     return text.str();
+ }
+@@ -217,7 +217,7 @@ string generate_map_events_text(Json map_data) {
+ 
+     ostringstream text;
+     text << get_generated_warning("data/maps/" + mapName + "/map.json", true);
+-    text << "\t.align 2\n\n";
++    text << "\tpalign\n\n";
+ 
+     string objects_label, warps_label, coords_label, bgs_label;
+ 
+@@ -345,7 +345,7 @@ string generate_map_events_text(Json map_data) {
+         bgs_label = "NULL";
+     }
+ 
+-    text << mapName << "_MapEvents::\n"
++    text << "\tpalign\n" << mapName << "_MapEvents::\n"
+          << "\tmap_events " << objects_label << ", " << warps_label << ", "
+          << coords_label << ", " << bgs_label << "\n\n";
+ 
+@@ -443,13 +443,13 @@ string generate_groups_text(Json groups_data) {
+         text << group << "::\n";
+         auto maps = groups_data[group].array_items();
+         for (Json &map_name : maps)
+-            text << "\t.4byte " << json_to_string(map_name) << "\n";
++            text << "\tptr " << json_to_string(map_name) << "\n";
+         text << "\n";
+     }
+ 
+-    text << "\t.align 2\n" << "gMapGroups::\n";
++    text << "\tpalign\n" << "gMapGroups::\n";
+     for (auto &group : groups_data["group_order"].array_items())
+-        text << "\t.4byte " << json_to_string(group) << "\n";
++        text << "\tptr " << json_to_string(group) << "\n";
+     text << "\n";
+ 
+     return text.str();
+@@ -600,14 +600,14 @@ string generate_layout_headers_text(Json layouts_data) {
+              << "\t.incbin \"" << json_to_string(layout, "border_filepath") << "\"\n\n"
+              << blockdata_label << "::\n"
+              << "\t.incbin \"" << json_to_string(layout, "blockdata_filepath") << "\"\n\n"
+-             << "\t.align 2\n"
++             << "\tpalign\n"
+              << layoutName << "::\n"
+              << "\t.4byte " << json_to_string(layout, "width") << "\n"
+              << "\t.4byte " << json_to_string(layout, "height") << "\n"
+-             << "\t.4byte " << border_label << "\n"
+-             << "\t.4byte " << blockdata_label << "\n"
+-             << "\t.4byte " << json_to_string(layout, "primary_tileset") << "\n"
+-             << "\t.4byte " << json_to_string(layout, "secondary_tileset") << "\n";
++             << "\tptr " << border_label << "\n"
++             << "\tptr " << blockdata_label << "\n"
++             << "\tptr " << json_to_string(layout, "primary_tileset") << "\n"
++             << "\tptr " << json_to_string(layout, "secondary_tileset") << "\n";
+         if (version == "firered") {
+             text << "\t.byte " << json_to_string(layout, "border_width") << "\n"
+                  << "\t.byte " << json_to_string(layout, "border_height") << "\n"
+@@ -624,13 +624,13 @@ string generate_layouts_table_text(Json layouts_data) {
+ 
+     text << get_generated_warning("data/layouts/layouts.json", true);
+ 
+-    text << "\t.align 2\n"
++    text << "\tpalign\n"
+          << json_to_string(layouts_data, "layouts_table_label") << "::\n";
+ 
+     for (auto &layout : layouts_data["layouts"].array_items()) {
+         string layout_name = json_to_string(layout, "name", true);
+         if (layout_name.empty()) layout_name = "NULL";
+-        text << "\t.4byte " << layout_name << "\n";
++        text << "\tptr " << layout_name << "\n";
+     }
+ 
+     return text.str();
