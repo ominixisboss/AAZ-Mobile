@@ -243,3 +243,19 @@ no-op, which is why it went unnoticed.
 Changed to `((__UINTPTR_TYPE__)VRAM_)` -- a compiler builtin, so the header does
 not need `stdint.h`. `PLTT` and `OAM` are plain arrays with no cast and were
 already fine; `VRAM` was the only macro of this shape.
+
+## Status: both ABIs build
+
+As of CI run 24 both `armeabi-v7a` and `arm64-v8a` compile, link and produce an
+APK, so the arm64 job is no longer `continue-on-error`.
+
+What is verified: all 48,316 pointer slots in the game data are widened, the
+arm64 shared object links with zero `R_AARCH64_ABS32` relocations, the arm32
+data output stays byte-identical to upstream, and both APKs build from a
+pristine checkout plus this patch series.
+
+What is NOT verified: that the game actually runs. There is no device or
+emulator in the build environment, so nothing here has executed a single frame.
+Runtime faults from a missed 32-bit assumption would look like corrupted
+graphics, wrong text, or a crash on entering a map or a battle, and only
+running the APK will find them.

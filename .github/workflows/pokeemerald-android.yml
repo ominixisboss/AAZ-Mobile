@@ -28,11 +28,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # armeabi-v7a is the known-good build. arm64-v8a is the in-progress
-        # port; it is allowed to fail without failing the workflow until it
-        # produces an APK. See android-build/ARM64-PORT.md.
+        # Both ABIs build. arm64-v8a is the one that installs on a 64-bit-only
+        # phone; armeabi-v7a is kept because it is the fork's original target
+        # and its data output is byte-identical to upstream, which is what
+        # catches regressions in the pointer-width port. Neither is allowed to
+        # fail. See android-build/ARM64-PORT.md.
         abi: [armeabi-v7a, arm64-v8a]
-    continue-on-error: ${{ matrix.abi == 'arm64-v8a' }}
     name: apk (${{ matrix.abi }})
     steps:
       - uses: actions/checkout@v4
