@@ -12714,10 +12714,16 @@ index 5dcc4b3c0..c79a5f392 100644
  
  void FieldEffectFreeGraphicsResources(struct Sprite *sprite)
 diff --git a/src/platform/bios.c b/src/platform/bios.c
-index f13c6fd90..629c16df6 100644
+index f13c6fd90..34bc3ceff 100644
 --- a/src/platform/bios.c
 +++ b/src/platform/bios.c
-@@ -8,7 +8,7 @@ unsigned char REG_BASE[0x400] __attribute__ ((aligned (4)));
+@@ -1,4 +1,5 @@
+ #include "global.h"
++#include "gba/flash_internal.h" // FLASH_ROM_SIZE, which sizes FLASH_BASE below
+ // BIOS function implementations are based on the VBA-M source code.
+ 
+ //memory defines here because there's no better spot for them
+@@ -8,7 +9,7 @@ unsigned char REG_BASE[0x400] __attribute__ ((aligned (4)));
  unsigned char PLTT[PLTT_SIZE] __attribute__ ((aligned (4)));
  unsigned char VRAM_[VRAM_SIZE] __attribute__ ((aligned (4)));
  unsigned char OAM[OAM_SIZE] __attribute__ ((aligned (4)));
