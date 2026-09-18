@@ -183,3 +183,46 @@ network policy, so no emulator images). CI can prove it compiles, links and
 packages; it cannot prove the data is laid out correctly. Wrong padding
 produces a build that installs and then misbehaves in ways only play-testing
 finds.
+
+## C-side 32-bit assumptions
+
+With every pointer slot in the game data widened, what fails next is ordinary C
+code that assumed a 4-byte pointer. These are tracked here as they surface.
+
+### Save block overflow (fixed)
+
+`src/save.c` fails its own size check on a 64-bit build:
+
+    src/save.c:80: error: 'SaveBlock1FreeSpace' declared as an array with a
+    negative size
+
+`SaveBlock1` embeds `objectEventTemplates[64]`, and `ObjectEventTemplate` grows
+from 24 to 32 bytes on arm64 because of its `const u8 *script` field. That is
+512 bytes more, taking `SaveBlock1` from 15,752 to 16,264 bytes against a
+four-sector budget of 3968 x 4 = 15,872 -- an overflow of 392 bytes.
+
+The field cannot simply be narrowed in the saved copy. Although
+`LoadSaveblockObjEventScripts()` in `src/overworld.c` overwrites every saved
+script pointer from the map header on load, so the *serialized* value is dead,
+`LoadBattlePyramidFloorObjectEventScripts()` writes real function pointers into
+the same array and the field system dereferences them at runtime. The field has
+to be pointer-width in memory.
+
+`SaveBlock1` is therefore given a fifth sector, but only on a 64-bit build:
+`SAVEBLOCK1_EXTRA_SECTORS` in `include/save.h` is 1 there and 0 otherwise, and
+every sector constant is expressed in terms of it. A 32-bit build keeps the
+GBA's exact layout -- same four sectors for `SaveBlock1`, same 14-sector slot,
+same 32-sector flash -- so the armeabi-v7a save format is untouched. A 64-bit
+build uses a 15-sector slot and a 34-sector flash, which is only possible
+because the port's "flash" is a plain file (`FLASH_BASE` in
+`src/platform/bios.c`), not real 1 Mbit hardware.
+
+Two static assertions in `src/save.c` keep the two halves honest: the sector
+layout must match the emulated flash size, and the two save slots must still
+fit below the Hall of Fame sectors.
+
+Note that an arm64 save file can never be byte-compatible with an arm32 one
+regardless of this change, since `SaveBlock1` serializes pointer-bearing
+structs either way.
+
+`SaveBlock2` and `PokemonStorage` contain no pointers and are unchanged.

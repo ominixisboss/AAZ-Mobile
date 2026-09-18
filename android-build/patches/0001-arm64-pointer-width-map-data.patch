@@ -4706,6 +4706,49 @@ index b8e3afd3d..0c7398038 100644
  	.endm
  
  .set __special__, 0
+diff --git a/include/gba/flash_internal.h b/include/gba/flash_internal.h
+index 7ddb92e35..f3cf79d68 100755
+--- a/include/gba/flash_internal.h
++++ b/include/gba/flash_internal.h
+@@ -1,15 +1,36 @@
+ #ifndef GUARD_GBA_FLASH_INTERNAL_H
+ #define GUARD_GBA_FLASH_INTERNAL_H
+ 
++// A 64-bit build's SaveBlock1 is 512 bytes larger than a 32-bit one -- it
++// embeds 64 ObjectEventTemplates, and each grows from 24 to 32 bytes once its
++// script pointer is 8 bytes wide. That overruns the four sectors the GBA save
++// layout allots it, so save.h gives SaveBlock1 a fifth sector there. That
++// pushes each of the two save slots up by one sector and the four sectors
++// after the slots up by two, so the emulated flash grows to match. A 32-bit
++// build keeps the GBA's exact 32-sector geometry.
++#if __SIZEOF_POINTER__ > 4
++#define FLASH_NUM_SECTORS 34
++#else
++#define FLASH_NUM_SECTORS 32
++#endif
++#define FLASH_SECTOR_SIZE 4096
++#define FLASH_ROM_SIZE (FLASH_NUM_SECTORS * FLASH_SECTOR_SIZE)
++
+ #ifndef PORTABLE
+ #define FLASH_BASE ((u8 *)0xE000000)
+ #else
+-extern unsigned char FLASH_BASE[131072];
++extern unsigned char FLASH_BASE[FLASH_ROM_SIZE];
+ #endif
+ 
+ #define FLASH_WRITE(addr, data) ((*(vu8 *)(FLASH_BASE + (addr))) = (data))
+ 
+-#define FLASH_ROM_SIZE_1M 131072 // 1 megabit ROM
++// Every descriptor in the agb_flash_* tables describes the 1 Mbit chip, so
++// this has to keep matching their romSize when a 64-bit build grows the
++// emulated flash past 1 Mbit -- otherwise the bank-switching branches in
++// agb_flash.c silently stop being taken. Bank switching is GBA-only code and a
++// GBA build is always 32-bit, so there it still sees exactly two 16-sector
++// banks, unchanged.
++#define FLASH_ROM_SIZE_1M FLASH_ROM_SIZE // 1 megabit ROM
+ 
+ #define SECTORS_PER_BANK 16
+ 
 diff --git a/include/global.h b/include/global.h
 index 1653b3a07..132e22d66 100644
 --- a/include/global.h
@@ -4731,6 +4774,51 @@ index 1653b3a07..132e22d66 100644
  // T2_READ_8 is a duplicate to remain consistent with each group.
  #define T2_READ_8(ptr)  ((ptr)[0])
  #define T2_READ_16(ptr) ((ptr)[0] + ((ptr)[1] << 8))
+diff --git a/include/save.h b/include/save.h
+index 41913d1df..6e2685680 100755
+--- a/include/save.h
++++ b/include/save.h
+@@ -14,18 +14,30 @@
+ 
+ #define SPECIAL_SECTOR_SENTINEL 0xB39D
+ 
++// SaveBlock1 spans four sectors on a 32-bit build, which is how the GBA lays
++// the save out. A 64-bit build needs 512 bytes more than that (see the comment
++// in gba/flash_internal.h), so it gets a fifth. Everything after SaveBlock1
++// shifts up by that one sector, and the sectors after the two save slots shift
++// up by two. A 32-bit build is unaffected: SAVEBLOCK1_EXTRA_SECTORS is 0 and
++// every constant below keeps its GBA value.
++#if __SIZEOF_POINTER__ > 4
++#define SAVEBLOCK1_EXTRA_SECTORS      1
++#else
++#define SAVEBLOCK1_EXTRA_SECTORS      0
++#endif
++
+ #define SECTOR_ID_SAVEBLOCK2          0
+ #define SECTOR_ID_SAVEBLOCK1_START    1
+-#define SECTOR_ID_SAVEBLOCK1_END      4
+-#define SECTOR_ID_PKMN_STORAGE_START  5
+-#define SECTOR_ID_PKMN_STORAGE_END   13
+-#define NUM_SECTORS_PER_SLOT         14
+-// Save Slot 1: 0-13;  Save Slot 2: 14-27
+-#define SECTOR_ID_HOF_1              28
+-#define SECTOR_ID_HOF_2              29
+-#define SECTOR_ID_TRAINER_HILL       30
+-#define SECTOR_ID_RECORDED_BATTLE    31
+-#define SECTORS_COUNT                32
++#define SECTOR_ID_SAVEBLOCK1_END     (4 + SAVEBLOCK1_EXTRA_SECTORS)
++#define SECTOR_ID_PKMN_STORAGE_START (5 + SAVEBLOCK1_EXTRA_SECTORS)
++#define SECTOR_ID_PKMN_STORAGE_END   (13 + SAVEBLOCK1_EXTRA_SECTORS)
++#define NUM_SECTORS_PER_SLOT         (14 + SAVEBLOCK1_EXTRA_SECTORS)
++// Save Slot 1: 0-13;  Save Slot 2: 14-27  (one sector later each on 64-bit)
++#define SECTOR_ID_HOF_1              (28 + 2 * SAVEBLOCK1_EXTRA_SECTORS)
++#define SECTOR_ID_HOF_2              (29 + 2 * SAVEBLOCK1_EXTRA_SECTORS)
++#define SECTOR_ID_TRAINER_HILL       (30 + 2 * SAVEBLOCK1_EXTRA_SECTORS)
++#define SECTOR_ID_RECORDED_BATTLE    (31 + 2 * SAVEBLOCK1_EXTRA_SECTORS)
++#define SECTORS_COUNT                (32 + 2 * SAVEBLOCK1_EXTRA_SECTORS)
+ 
+ #define NUM_HOF_SECTORS 2
+ 
 diff --git a/include/script.h b/include/script.h
 index 7c180e961..b2d1d9dab 100755
 --- a/include/script.h
@@ -8461,6 +8549,74 @@ index beef2ccc9..579554723 100644
 +	ptr	se_win_open_1
  
  	.end
+diff --git a/src/agb_flash_dummy.c b/src/agb_flash_dummy.c
+index cdebc5ed7..f38b007da 100644
+--- a/src/agb_flash_dummy.c
++++ b/src/agb_flash_dummy.c
+@@ -20,11 +20,11 @@ const struct FlashSetupInfo DUMMY_SAVE =
+     WaitForFlashWrite_DUMMY,
+     dummyMaxTime,
+     {
+-        131072, // ROM size
++        FLASH_ROM_SIZE, // ROM size
+         {
+             4096, // sector size
+               12, // bit shift to multiply by sector size (4096 == 1 << 12)
+-              32, // number of sectors
++              FLASH_NUM_SECTORS, // number of sectors
+                0  // appears to be unused
+         },
+         { 3, 1 }, // wait state setup data
+diff --git a/src/agb_flash_le.c b/src/agb_flash_le.c
+index 474def6e4..6fe885dc0 100644
+--- a/src/agb_flash_le.c
++++ b/src/agb_flash_le.c
+@@ -19,11 +19,11 @@ const struct FlashSetupInfo LE26FV10N1TS =
+     WaitForFlashWrite_Common,
+     leMaxTime,
+     {
+-        131072, // ROM size
++        FLASH_ROM_SIZE, // ROM size
+         {
+             4096, // sector size
+               12, // bit shift to multiply by sector size (4096 == 1 << 12)
+-              32, // number of sectors
++              FLASH_NUM_SECTORS, // number of sectors
+                0  // appears to be unused
+         },
+         { 3, 1 }, // wait state setup data
+diff --git a/src/agb_flash_mx.c b/src/agb_flash_mx.c
+index 422e8a59e..a372e8852 100644
+--- a/src/agb_flash_mx.c
++++ b/src/agb_flash_mx.c
+@@ -23,11 +23,11 @@ const struct FlashSetupInfo MX29L010 =
+     WaitForFlashWrite_Common,
+     mxMaxTime,
+     {
+-        131072, // ROM size
++        FLASH_ROM_SIZE, // ROM size
+         {
+             4096, // sector size
+               12, // bit shift to multiply by sector size (4096 == 1 << 12)
+-              32, // number of sectors
++              FLASH_NUM_SECTORS, // number of sectors
+                0  // appears to be unused
+         },
+         { 3, 1 }, // wait state setup data
+@@ -44,11 +44,11 @@ const struct FlashSetupInfo DefaultFlash =
+     WaitForFlashWrite_Common,
+     mxMaxTime,
+     {
+-        131072, // ROM size
++        FLASH_ROM_SIZE, // ROM size
+         {
+             4096, // sector size
+               12, // bit shift to multiply by sector size (4096 == 1 << 12)
+-              32, // number of sectors
++              FLASH_NUM_SECTORS, // number of sectors
+                0  // appears to be unused
+         },
+         { 3, 1 }, // wait state setup data
 diff --git a/src/battle_ai_script_commands.c b/src/battle_ai_script_commands.c
 index 6fd3cdad8..456ab3f06 100644
 --- a/src/battle_ai_script_commands.c
@@ -12557,6 +12713,45 @@ index 5dcc4b3c0..c79a5f392 100644
  }
  
  void FieldEffectFreeGraphicsResources(struct Sprite *sprite)
+diff --git a/src/platform/bios.c b/src/platform/bios.c
+index f13c6fd90..629c16df6 100644
+--- a/src/platform/bios.c
++++ b/src/platform/bios.c
+@@ -8,7 +8,7 @@ unsigned char REG_BASE[0x400] __attribute__ ((aligned (4)));
+ unsigned char PLTT[PLTT_SIZE] __attribute__ ((aligned (4)));
+ unsigned char VRAM_[VRAM_SIZE] __attribute__ ((aligned (4)));
+ unsigned char OAM[OAM_SIZE] __attribute__ ((aligned (4)));
+-unsigned char FLASH_BASE[131072] __attribute__ ((aligned (4)));
++unsigned char FLASH_BASE[FLASH_ROM_SIZE] __attribute__ ((aligned (4)));
+ struct SoundInfo *SOUND_INFO_PTR;
+ 
+ static uint32_t CPUReadMemory(const void *src)
+diff --git a/src/save.c b/src/save.c
+index f60b25bd1..d1cea023e 100644
+--- a/src/save.c
++++ b/src/save.c
+@@ -61,7 +61,11 @@ struct
+     SAVEBLOCK_CHUNK(struct SaveBlock1, 0), // SECTOR_ID_SAVEBLOCK1_START
+     SAVEBLOCK_CHUNK(struct SaveBlock1, 1),
+     SAVEBLOCK_CHUNK(struct SaveBlock1, 2),
+-    SAVEBLOCK_CHUNK(struct SaveBlock1, 3), // SECTOR_ID_SAVEBLOCK1_END
++    SAVEBLOCK_CHUNK(struct SaveBlock1, 3),
++#if SAVEBLOCK1_EXTRA_SECTORS
++    SAVEBLOCK_CHUNK(struct SaveBlock1, 4),
++#endif
++                                           // SECTOR_ID_SAVEBLOCK1_END
+ 
+     SAVEBLOCK_CHUNK(struct PokemonStorage, 0), // SECTOR_ID_PKMN_STORAGE_START
+     SAVEBLOCK_CHUNK(struct PokemonStorage, 1),
+@@ -76,6 +80,8 @@ struct
+ 
+ // These will produce an error if a save struct is larger than the space
+ // alloted for it in the flash.
++STATIC_ASSERT(SECTORS_COUNT == FLASH_NUM_SECTORS, SaveLayoutMatchesFlash);
++STATIC_ASSERT(NUM_SECTORS_PER_SLOT * NUM_SAVE_SLOTS <= SECTOR_ID_HOF_1, SaveSlotsFitBeforeHof);
+ STATIC_ASSERT(sizeof(struct SaveBlock2) <= SECTOR_DATA_SIZE, SaveBlock2FreeSpace);
+ STATIC_ASSERT(sizeof(struct SaveBlock1) <= SECTOR_DATA_SIZE * (SECTOR_ID_SAVEBLOCK1_END - SECTOR_ID_SAVEBLOCK1_START + 1), SaveBlock1FreeSpace);
+ STATIC_ASSERT(sizeof(struct PokemonStorage) <= SECTOR_DATA_SIZE * (SECTOR_ID_PKMN_STORAGE_END - SECTOR_ID_PKMN_STORAGE_START + 1), PokemonStorageFreeSpace);
 diff --git a/src/scrcmd.c b/src/scrcmd.c
 index 39a6ec7cc..5d3487054 100644
 --- a/src/scrcmd.c
