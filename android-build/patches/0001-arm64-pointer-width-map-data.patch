@@ -490,6 +490,88 @@ index d14c7e98a..fcfc607ee 100644
  	.endm
  
  /* useful script macros*/
+diff --git a/asm/macros/battle_anim_script.inc b/asm/macros/battle_anim_script.inc
+index a1106bd75..b4e4e47f7 100644
+--- a/asm/macros/battle_anim_script.inc
++++ b/asm/macros/battle_anim_script.inc
+@@ -12,7 +12,7 @@
+ 
+ .macro createsprite template:req, anim_battler:req, subpriority_offset:req, argv:vararg
+ 	.byte 0x02
+-	.int \template
++	ptr_stream \template
+ 	.if \anim_battler == ANIM_TARGET
+ 	.byte ANIMSPRITE_IS_TARGET | (\subpriority_offset & 0x7F)
+ 	.else
+@@ -26,7 +26,7 @@
+ 
+ 	.macro createvisualtask addr:req, priority:req, argv:vararg
+ 	.byte 0x03
+-	.int \addr
++	ptr_stream \addr
+ 	.byte \priority
+ 	.byte (.Lcreatetask_\@_2 - .Lcreatetask_\@_1) / 2
+ .Lcreatetask_\@_1:
+@@ -81,7 +81,7 @@
+ 
+ 	.macro call ptr:req
+ 	.byte 0xe
+-	.int \ptr
++	ptr_stream \ptr
+ 	.endm
+ 
+ 	.macro return
+@@ -96,19 +96,19 @@
+ 
+ 	.macro choosetwoturnanim ptr1:req, ptr2:req
+ 	.byte 0x11
+-	.int \ptr1
+-	.int \ptr2
++	ptr_stream \ptr1
++	ptr_stream \ptr2
+ 	.endm
+ 
+ 	.macro jumpifmoveturn value:req, ptr:req
+ 	.byte 0x12
+ 	.byte \value
+-	.int \ptr
++	ptr_stream \ptr
+ 	.endm
+ 
+ 	.macro goto ptr:req
+ 	.byte 0x13
+-	.int \ptr
++	ptr_stream \ptr
+ 	.endm
+ 
+ 	.macro fadetobg bg:req
+@@ -175,7 +175,7 @@
+ 
+ 	.macro createsoundtask addr:req, argv:vararg
+ 	.byte 0x1F
+-	.int \addr
++	ptr_stream \addr
+ 	.byte (.Lcreatetask_1F_\@_2 - .Lcreatetask_1F_\@_1) / 2
+ .Lcreatetask_1F_\@_1:
+ 	.short \argv
+@@ -190,7 +190,7 @@
+ 	.byte 0x21
+ 	.byte \argId
+ 	.short \value
+-	.int \ptr
++	ptr_stream \ptr
+ 	.endm
+ 
+ 	.macro monbg_static battler:req
+@@ -205,7 +205,7 @@
+ 
+ 	.macro jumpifcontest ptr:req
+ 	.byte 0x24
+-	.int \ptr
++	ptr_stream \ptr
+ 	.endm
+ 
+ 	.macro fadetobgfromset bgOpponent:req, bgPlayer:req, bgContest:req
 diff --git a/asm/macros/battle_script.inc b/asm/macros/battle_script.inc
 index 00d61d15d..aeb6b548b 100644
 --- a/asm/macros/battle_script.inc
@@ -1963,6 +2045,830 @@ index 9459322f8..411df4fd5 100644
  
  AI_CheckBadMove:
  	if_target_is_ally AI_Ret
+diff --git a/data/battle_anim_scripts.s b/data/battle_anim_scripts.s
+index ac24884ba..0888461a0 100644
+--- a/data/battle_anim_scripts.s
++++ b/data/battle_anim_scripts.s
+@@ -10,416 +10,416 @@
+ 
+ 	.section script_data, "aw"
+ 
+-	.align 2
++	palign
+ gMovesWithQuietBGM::
+ 	.short MOVE_SING, MOVE_PERISH_SONG, MOVE_GRASS_WHISTLE, 0xFFFF
+ 
+-	.align 2
++	palign
+ gBattleAnims_Moves::
+-	.int Move_NONE
+-	.int Move_POUND
+-	.int Move_KARATE_CHOP
+-	.int Move_DOUBLE_SLAP
+-	.int Move_COMET_PUNCH
+-	.int Move_MEGA_PUNCH
+-	.int Move_PAY_DAY
+-	.int Move_FIRE_PUNCH
+-	.int Move_ICE_PUNCH
+-	.int Move_THUNDER_PUNCH
+-	.int Move_SCRATCH
+-	.int Move_VICE_GRIP
+-	.int Move_GUILLOTINE
+-	.int Move_RAZOR_WIND
+-	.int Move_SWORDS_DANCE
+-	.int Move_CUT
+-	.int Move_GUST
+-	.int Move_WING_ATTACK
+-	.int Move_WHIRLWIND
+-	.int Move_FLY
+-	.int Move_BIND
+-	.int Move_SLAM
+-	.int Move_VINE_WHIP
+-	.int Move_STOMP
+-	.int Move_DOUBLE_KICK
+-	.int Move_MEGA_KICK
+-	.int Move_JUMP_KICK
+-	.int Move_ROLLING_KICK
+-	.int Move_SAND_ATTACK
+-	.int Move_HEADBUTT
+-	.int Move_HORN_ATTACK
+-	.int Move_FURY_ATTACK
+-	.int Move_HORN_DRILL
+-	.int Move_TACKLE
+-	.int Move_BODY_SLAM
+-	.int Move_WRAP
+-	.int Move_TAKE_DOWN
+-	.int Move_THRASH
+-	.int Move_DOUBLE_EDGE
+-	.int Move_TAIL_WHIP
+-	.int Move_POISON_STING
+-	.int Move_TWINEEDLE
+-	.int Move_PIN_MISSILE
+-	.int Move_LEER
+-	.int Move_BITE
+-	.int Move_GROWL
+-	.int Move_ROAR
+-	.int Move_SING
+-	.int Move_SUPERSONIC
+-	.int Move_SONIC_BOOM
+-	.int Move_DISABLE
+-	.int Move_ACID
+-	.int Move_EMBER
+-	.int Move_FLAMETHROWER
+-	.int Move_MIST
+-	.int Move_WATER_GUN
+-	.int Move_HYDRO_PUMP
+-	.int Move_SURF
+-	.int Move_ICE_BEAM
+-	.int Move_BLIZZARD
+-	.int Move_PSYBEAM
+-	.int Move_BUBBLE_BEAM
+-	.int Move_AURORA_BEAM
+-	.int Move_HYPER_BEAM
+-	.int Move_PECK
+-	.int Move_DRILL_PECK
+-	.int Move_SUBMISSION
+-	.int Move_LOW_KICK
+-	.int Move_COUNTER
+-	.int Move_SEISMIC_TOSS
+-	.int Move_STRENGTH
+-	.int Move_ABSORB
+-	.int Move_MEGA_DRAIN
+-	.int Move_LEECH_SEED
+-	.int Move_GROWTH
+-	.int Move_RAZOR_LEAF
+-	.int Move_SOLAR_BEAM
+-	.int Move_POISON_POWDER
+-	.int Move_STUN_SPORE
+-	.int Move_SLEEP_POWDER
+-	.int Move_PETAL_DANCE
+-	.int Move_STRING_SHOT
+-	.int Move_DRAGON_RAGE
+-	.int Move_FIRE_SPIN
+-	.int Move_THUNDER_SHOCK
+-	.int Move_THUNDERBOLT
+-	.int Move_THUNDER_WAVE
+-	.int Move_THUNDER
+-	.int Move_ROCK_THROW
+-	.int Move_EARTHQUAKE
+-	.int Move_FISSURE
+-	.int Move_DIG
+-	.int Move_TOXIC
+-	.int Move_CONFUSION
+-	.int Move_PSYCHIC
+-	.int Move_HYPNOSIS
+-	.int Move_MEDITATE
+-	.int Move_AGILITY
+-	.int Move_QUICK_ATTACK
+-	.int Move_RAGE
+-	.int Move_TELEPORT
+-	.int Move_NIGHT_SHADE
+-	.int Move_MIMIC
+-	.int Move_SCREECH
+-	.int Move_DOUBLE_TEAM
+-	.int Move_RECOVER
+-	.int Move_HARDEN
+-	.int Move_MINIMIZE
+-	.int Move_SMOKESCREEN
+-	.int Move_CONFUSE_RAY
+-	.int Move_WITHDRAW
+-	.int Move_DEFENSE_CURL
+-	.int Move_BARRIER
+-	.int Move_LIGHT_SCREEN
+-	.int Move_HAZE
+-	.int Move_REFLECT
+-	.int Move_FOCUS_ENERGY
+-	.int Move_BIDE
+-	.int Move_METRONOME
+-	.int Move_MIRROR_MOVE /* doesnt have an actual animation*/
+-	.int Move_SELF_DESTRUCT
+-	.int Move_EGG_BOMB
+-	.int Move_LICK
+-	.int Move_SMOG
+-	.int Move_SLUDGE
+-	.int Move_BONE_CLUB
+-	.int Move_FIRE_BLAST
+-	.int Move_WATERFALL
+-	.int Move_CLAMP
+-	.int Move_SWIFT
+-	.int Move_SKULL_BASH
+-	.int Move_SPIKE_CANNON
+-	.int Move_CONSTRICT
+-	.int Move_AMNESIA
+-	.int Move_KINESIS
+-	.int Move_SOFT_BOILED
+-	.int Move_HI_JUMP_KICK
+-	.int Move_GLARE
+-	.int Move_DREAM_EATER
+-	.int Move_POISON_GAS
+-	.int Move_BARRAGE
+-	.int Move_LEECH_LIFE
+-	.int Move_LOVELY_KISS
+-	.int Move_SKY_ATTACK
+-	.int Move_TRANSFORM
+-	.int Move_BUBBLE
+-	.int Move_DIZZY_PUNCH
+-	.int Move_SPORE
+-	.int Move_FLASH
+-	.int Move_PSYWAVE
+-	.int Move_SPLASH
+-	.int Move_ACID_ARMOR
+-	.int Move_CRABHAMMER
+-	.int Move_EXPLOSION
+-	.int Move_FURY_SWIPES
+-	.int Move_BONEMERANG
+-	.int Move_REST
+-	.int Move_ROCK_SLIDE
+-	.int Move_HYPER_FANG
+-	.int Move_SHARPEN
+-	.int Move_CONVERSION
+-	.int Move_TRI_ATTACK
+-	.int Move_SUPER_FANG
+-	.int Move_SLASH
+-	.int Move_SUBSTITUTE
+-	.int Move_STRUGGLE
+-	.int Move_SKETCH
+-	.int Move_TRIPLE_KICK
+-	.int Move_THIEF
+-	.int Move_SPIDER_WEB
+-	.int Move_MIND_READER
+-	.int Move_NIGHTMARE
+-	.int Move_FLAME_WHEEL
+-	.int Move_SNORE
+-	.int Move_CURSE
+-	.int Move_FLAIL
+-	.int Move_CONVERSION_2
+-	.int Move_AEROBLAST
+-	.int Move_COTTON_SPORE
+-	.int Move_REVERSAL
+-	.int Move_SPITE
+-	.int Move_POWDER_SNOW
+-	.int Move_PROTECT
+-	.int Move_MACH_PUNCH
+-	.int Move_SCARY_FACE
+-	.int Move_FAINT_ATTACK
+-	.int Move_SWEET_KISS
+-	.int Move_BELLY_DRUM
+-	.int Move_SLUDGE_BOMB
+-	.int Move_MUD_SLAP
+-	.int Move_OCTAZOOKA
+-	.int Move_SPIKES
+-	.int Move_ZAP_CANNON
+-	.int Move_FORESIGHT
+-	.int Move_DESTINY_BOND
+-	.int Move_PERISH_SONG
+-	.int Move_ICY_WIND
+-	.int Move_DETECT
+-	.int Move_BONE_RUSH
+-	.int Move_LOCK_ON
+-	.int Move_OUTRAGE
+-	.int Move_SANDSTORM
+-	.int Move_GIGA_DRAIN
+-	.int Move_ENDURE
+-	.int Move_CHARM
+-	.int Move_ROLLOUT
+-	.int Move_FALSE_SWIPE
+-	.int Move_SWAGGER
+-	.int Move_MILK_DRINK
+-	.int Move_SPARK
+-	.int Move_FURY_CUTTER
+-	.int Move_STEEL_WING
+-	.int Move_MEAN_LOOK
+-	.int Move_ATTRACT
+-	.int Move_SLEEP_TALK
+-	.int Move_HEAL_BELL
+-	.int Move_RETURN
+-	.int Move_PRESENT
+-	.int Move_FRUSTRATION
+-	.int Move_SAFEGUARD
+-	.int Move_PAIN_SPLIT
+-	.int Move_SACRED_FIRE
+-	.int Move_MAGNITUDE
+-	.int Move_DYNAMIC_PUNCH
+-	.int Move_MEGAHORN
+-	.int Move_DRAGON_BREATH
+-	.int Move_BATON_PASS
+-	.int Move_ENCORE
+-	.int Move_PURSUIT
+-	.int Move_RAPID_SPIN
+-	.int Move_SWEET_SCENT
+-	.int Move_IRON_TAIL
+-	.int Move_METAL_CLAW
+-	.int Move_VITAL_THROW
+-	.int Move_MORNING_SUN
+-	.int Move_SYNTHESIS
+-	.int Move_MOONLIGHT
+-	.int Move_HIDDEN_POWER
+-	.int Move_CROSS_CHOP
+-	.int Move_TWISTER
+-	.int Move_RAIN_DANCE
+-	.int Move_SUNNY_DAY
+-	.int Move_CRUNCH
+-	.int Move_MIRROR_COAT
+-	.int Move_PSYCH_UP
+-	.int Move_EXTREME_SPEED
+-	.int Move_ANCIENT_POWER
+-	.int Move_SHADOW_BALL
+-	.int Move_FUTURE_SIGHT
+-	.int Move_ROCK_SMASH
+-	.int Move_WHIRLPOOL
+-	.int Move_BEAT_UP
+-	.int Move_FAKE_OUT
+-	.int Move_UPROAR
+-	.int Move_STOCKPILE
+-	.int Move_SPIT_UP
+-	.int Move_SWALLOW
+-	.int Move_HEAT_WAVE
+-	.int Move_HAIL
+-	.int Move_TORMENT
+-	.int Move_FLATTER
+-	.int Move_WILL_O_WISP
+-	.int Move_MEMENTO
+-	.int Move_FACADE
+-	.int Move_FOCUS_PUNCH
+-	.int Move_SMELLING_SALT
+-	.int Move_FOLLOW_ME
+-	.int Move_NATURE_POWER
+-	.int Move_CHARGE
+-	.int Move_TAUNT
+-	.int Move_HELPING_HAND
+-	.int Move_TRICK
+-	.int Move_ROLE_PLAY
+-	.int Move_WISH
+-	.int Move_ASSIST
+-	.int Move_INGRAIN
+-	.int Move_SUPERPOWER
+-	.int Move_MAGIC_COAT
+-	.int Move_RECYCLE
+-	.int Move_REVENGE
+-	.int Move_BRICK_BREAK
+-	.int Move_YAWN
+-	.int Move_KNOCK_OFF
+-	.int Move_ENDEAVOR
+-	.int Move_ERUPTION
+-	.int Move_SKILL_SWAP
+-	.int Move_IMPRISON
+-	.int Move_REFRESH
+-	.int Move_GRUDGE
+-	.int Move_SNATCH
+-	.int Move_SECRET_POWER
+-	.int Move_DIVE
+-	.int Move_ARM_THRUST
+-	.int Move_CAMOUFLAGE
+-	.int Move_TAIL_GLOW
+-	.int Move_LUSTER_PURGE
+-	.int Move_MIST_BALL
+-	.int Move_FEATHER_DANCE
+-	.int Move_TEETER_DANCE
+-	.int Move_BLAZE_KICK
+-	.int Move_MUD_SPORT
+-	.int Move_ICE_BALL
+-	.int Move_NEEDLE_ARM
+-	.int Move_SLACK_OFF
+-	.int Move_HYPER_VOICE
+-	.int Move_POISON_FANG
+-	.int Move_CRUSH_CLAW
+-	.int Move_BLAST_BURN
+-	.int Move_HYDRO_CANNON
+-	.int Move_METEOR_MASH
+-	.int Move_ASTONISH
+-	.int Move_WEATHER_BALL
+-	.int Move_AROMATHERAPY
+-	.int Move_FAKE_TEARS
+-	.int Move_AIR_CUTTER
+-	.int Move_OVERHEAT
+-	.int Move_ODOR_SLEUTH
+-	.int Move_ROCK_TOMB
+-	.int Move_SILVER_WIND
+-	.int Move_METAL_SOUND
+-	.int Move_GRASS_WHISTLE
+-	.int Move_TICKLE
+-	.int Move_COSMIC_POWER
+-	.int Move_WATER_SPOUT
+-	.int Move_SIGNAL_BEAM
+-	.int Move_SHADOW_PUNCH
+-	.int Move_EXTRASENSORY
+-	.int Move_SKY_UPPERCUT
+-	.int Move_SAND_TOMB
+-	.int Move_SHEER_COLD
+-	.int Move_MUDDY_WATER
+-	.int Move_BULLET_SEED
+-	.int Move_AERIAL_ACE
+-	.int Move_ICICLE_SPEAR
+-	.int Move_IRON_DEFENSE
+-	.int Move_BLOCK
+-	.int Move_HOWL
+-	.int Move_DRAGON_CLAW
+-	.int Move_FRENZY_PLANT
+-	.int Move_BULK_UP
+-	.int Move_BOUNCE
+-	.int Move_MUD_SHOT
+-	.int Move_POISON_TAIL
+-	.int Move_COVET
+-	.int Move_VOLT_TACKLE
+-	.int Move_MAGICAL_LEAF
+-	.int Move_WATER_SPORT
+-	.int Move_CALM_MIND
+-	.int Move_LEAF_BLADE
+-	.int Move_DRAGON_DANCE
+-	.int Move_ROCK_BLAST
+-	.int Move_SHOCK_WAVE
+-	.int Move_WATER_PULSE
+-	.int Move_DOOM_DESIRE
+-	.int Move_PSYCHO_BOOST
+-	.int Move_COUNT /* cannot be reached, because last move is Psycho Boost*/
+-
+-	.align 2
++	ptr Move_NONE
++	ptr Move_POUND
++	ptr Move_KARATE_CHOP
++	ptr Move_DOUBLE_SLAP
++	ptr Move_COMET_PUNCH
++	ptr Move_MEGA_PUNCH
++	ptr Move_PAY_DAY
++	ptr Move_FIRE_PUNCH
++	ptr Move_ICE_PUNCH
++	ptr Move_THUNDER_PUNCH
++	ptr Move_SCRATCH
++	ptr Move_VICE_GRIP
++	ptr Move_GUILLOTINE
++	ptr Move_RAZOR_WIND
++	ptr Move_SWORDS_DANCE
++	ptr Move_CUT
++	ptr Move_GUST
++	ptr Move_WING_ATTACK
++	ptr Move_WHIRLWIND
++	ptr Move_FLY
++	ptr Move_BIND
++	ptr Move_SLAM
++	ptr Move_VINE_WHIP
++	ptr Move_STOMP
++	ptr Move_DOUBLE_KICK
++	ptr Move_MEGA_KICK
++	ptr Move_JUMP_KICK
++	ptr Move_ROLLING_KICK
++	ptr Move_SAND_ATTACK
++	ptr Move_HEADBUTT
++	ptr Move_HORN_ATTACK
++	ptr Move_FURY_ATTACK
++	ptr Move_HORN_DRILL
++	ptr Move_TACKLE
++	ptr Move_BODY_SLAM
++	ptr Move_WRAP
++	ptr Move_TAKE_DOWN
++	ptr Move_THRASH
++	ptr Move_DOUBLE_EDGE
++	ptr Move_TAIL_WHIP
++	ptr Move_POISON_STING
++	ptr Move_TWINEEDLE
++	ptr Move_PIN_MISSILE
++	ptr Move_LEER
++	ptr Move_BITE
++	ptr Move_GROWL
++	ptr Move_ROAR
++	ptr Move_SING
++	ptr Move_SUPERSONIC
++	ptr Move_SONIC_BOOM
++	ptr Move_DISABLE
++	ptr Move_ACID
++	ptr Move_EMBER
++	ptr Move_FLAMETHROWER
++	ptr Move_MIST
++	ptr Move_WATER_GUN
++	ptr Move_HYDRO_PUMP
++	ptr Move_SURF
++	ptr Move_ICE_BEAM
++	ptr Move_BLIZZARD
++	ptr Move_PSYBEAM
++	ptr Move_BUBBLE_BEAM
++	ptr Move_AURORA_BEAM
++	ptr Move_HYPER_BEAM
++	ptr Move_PECK
++	ptr Move_DRILL_PECK
++	ptr Move_SUBMISSION
++	ptr Move_LOW_KICK
++	ptr Move_COUNTER
++	ptr Move_SEISMIC_TOSS
++	ptr Move_STRENGTH
++	ptr Move_ABSORB
++	ptr Move_MEGA_DRAIN
++	ptr Move_LEECH_SEED
++	ptr Move_GROWTH
++	ptr Move_RAZOR_LEAF
++	ptr Move_SOLAR_BEAM
++	ptr Move_POISON_POWDER
++	ptr Move_STUN_SPORE
++	ptr Move_SLEEP_POWDER
++	ptr Move_PETAL_DANCE
++	ptr Move_STRING_SHOT
++	ptr Move_DRAGON_RAGE
++	ptr Move_FIRE_SPIN
++	ptr Move_THUNDER_SHOCK
++	ptr Move_THUNDERBOLT
++	ptr Move_THUNDER_WAVE
++	ptr Move_THUNDER
++	ptr Move_ROCK_THROW
++	ptr Move_EARTHQUAKE
++	ptr Move_FISSURE
++	ptr Move_DIG
++	ptr Move_TOXIC
++	ptr Move_CONFUSION
++	ptr Move_PSYCHIC
++	ptr Move_HYPNOSIS
++	ptr Move_MEDITATE
++	ptr Move_AGILITY
++	ptr Move_QUICK_ATTACK
++	ptr Move_RAGE
++	ptr Move_TELEPORT
++	ptr Move_NIGHT_SHADE
++	ptr Move_MIMIC
++	ptr Move_SCREECH
++	ptr Move_DOUBLE_TEAM
++	ptr Move_RECOVER
++	ptr Move_HARDEN
++	ptr Move_MINIMIZE
++	ptr Move_SMOKESCREEN
++	ptr Move_CONFUSE_RAY
++	ptr Move_WITHDRAW
++	ptr Move_DEFENSE_CURL
++	ptr Move_BARRIER
++	ptr Move_LIGHT_SCREEN
++	ptr Move_HAZE
++	ptr Move_REFLECT
++	ptr Move_FOCUS_ENERGY
++	ptr Move_BIDE
++	ptr Move_METRONOME
++	ptr Move_MIRROR_MOVE /* doesnt have an actual animation*/
++	ptr Move_SELF_DESTRUCT
++	ptr Move_EGG_BOMB
++	ptr Move_LICK
++	ptr Move_SMOG
++	ptr Move_SLUDGE
++	ptr Move_BONE_CLUB
++	ptr Move_FIRE_BLAST
++	ptr Move_WATERFALL
++	ptr Move_CLAMP
++	ptr Move_SWIFT
++	ptr Move_SKULL_BASH
++	ptr Move_SPIKE_CANNON
++	ptr Move_CONSTRICT
++	ptr Move_AMNESIA
++	ptr Move_KINESIS
++	ptr Move_SOFT_BOILED
++	ptr Move_HI_JUMP_KICK
++	ptr Move_GLARE
++	ptr Move_DREAM_EATER
++	ptr Move_POISON_GAS
++	ptr Move_BARRAGE
++	ptr Move_LEECH_LIFE
++	ptr Move_LOVELY_KISS
++	ptr Move_SKY_ATTACK
++	ptr Move_TRANSFORM
++	ptr Move_BUBBLE
++	ptr Move_DIZZY_PUNCH
++	ptr Move_SPORE
++	ptr Move_FLASH
++	ptr Move_PSYWAVE
++	ptr Move_SPLASH
++	ptr Move_ACID_ARMOR
++	ptr Move_CRABHAMMER
++	ptr Move_EXPLOSION
++	ptr Move_FURY_SWIPES
++	ptr Move_BONEMERANG
++	ptr Move_REST
++	ptr Move_ROCK_SLIDE
++	ptr Move_HYPER_FANG
++	ptr Move_SHARPEN
++	ptr Move_CONVERSION
++	ptr Move_TRI_ATTACK
++	ptr Move_SUPER_FANG
++	ptr Move_SLASH
++	ptr Move_SUBSTITUTE
++	ptr Move_STRUGGLE
++	ptr Move_SKETCH
++	ptr Move_TRIPLE_KICK
++	ptr Move_THIEF
++	ptr Move_SPIDER_WEB
++	ptr Move_MIND_READER
++	ptr Move_NIGHTMARE
++	ptr Move_FLAME_WHEEL
++	ptr Move_SNORE
++	ptr Move_CURSE
++	ptr Move_FLAIL
++	ptr Move_CONVERSION_2
++	ptr Move_AEROBLAST
++	ptr Move_COTTON_SPORE
++	ptr Move_REVERSAL
++	ptr Move_SPITE
++	ptr Move_POWDER_SNOW
++	ptr Move_PROTECT
++	ptr Move_MACH_PUNCH
++	ptr Move_SCARY_FACE
++	ptr Move_FAINT_ATTACK
++	ptr Move_SWEET_KISS
++	ptr Move_BELLY_DRUM
++	ptr Move_SLUDGE_BOMB
++	ptr Move_MUD_SLAP
++	ptr Move_OCTAZOOKA
++	ptr Move_SPIKES
++	ptr Move_ZAP_CANNON
++	ptr Move_FORESIGHT
++	ptr Move_DESTINY_BOND
++	ptr Move_PERISH_SONG
++	ptr Move_ICY_WIND
++	ptr Move_DETECT
++	ptr Move_BONE_RUSH
++	ptr Move_LOCK_ON
++	ptr Move_OUTRAGE
++	ptr Move_SANDSTORM
++	ptr Move_GIGA_DRAIN
++	ptr Move_ENDURE
++	ptr Move_CHARM
++	ptr Move_ROLLOUT
++	ptr Move_FALSE_SWIPE
++	ptr Move_SWAGGER
++	ptr Move_MILK_DRINK
++	ptr Move_SPARK
++	ptr Move_FURY_CUTTER
++	ptr Move_STEEL_WING
++	ptr Move_MEAN_LOOK
++	ptr Move_ATTRACT
++	ptr Move_SLEEP_TALK
++	ptr Move_HEAL_BELL
++	ptr Move_RETURN
++	ptr Move_PRESENT
++	ptr Move_FRUSTRATION
++	ptr Move_SAFEGUARD
++	ptr Move_PAIN_SPLIT
++	ptr Move_SACRED_FIRE
++	ptr Move_MAGNITUDE
++	ptr Move_DYNAMIC_PUNCH
++	ptr Move_MEGAHORN
++	ptr Move_DRAGON_BREATH
++	ptr Move_BATON_PASS
++	ptr Move_ENCORE
++	ptr Move_PURSUIT
++	ptr Move_RAPID_SPIN
++	ptr Move_SWEET_SCENT
++	ptr Move_IRON_TAIL
++	ptr Move_METAL_CLAW
++	ptr Move_VITAL_THROW
++	ptr Move_MORNING_SUN
++	ptr Move_SYNTHESIS
++	ptr Move_MOONLIGHT
++	ptr Move_HIDDEN_POWER
++	ptr Move_CROSS_CHOP
++	ptr Move_TWISTER
++	ptr Move_RAIN_DANCE
++	ptr Move_SUNNY_DAY
++	ptr Move_CRUNCH
++	ptr Move_MIRROR_COAT
++	ptr Move_PSYCH_UP
++	ptr Move_EXTREME_SPEED
++	ptr Move_ANCIENT_POWER
++	ptr Move_SHADOW_BALL
++	ptr Move_FUTURE_SIGHT
++	ptr Move_ROCK_SMASH
++	ptr Move_WHIRLPOOL
++	ptr Move_BEAT_UP
++	ptr Move_FAKE_OUT
++	ptr Move_UPROAR
++	ptr Move_STOCKPILE
++	ptr Move_SPIT_UP
++	ptr Move_SWALLOW
++	ptr Move_HEAT_WAVE
++	ptr Move_HAIL
++	ptr Move_TORMENT
++	ptr Move_FLATTER
++	ptr Move_WILL_O_WISP
++	ptr Move_MEMENTO
++	ptr Move_FACADE
++	ptr Move_FOCUS_PUNCH
++	ptr Move_SMELLING_SALT
++	ptr Move_FOLLOW_ME
++	ptr Move_NATURE_POWER
++	ptr Move_CHARGE
++	ptr Move_TAUNT
++	ptr Move_HELPING_HAND
++	ptr Move_TRICK
++	ptr Move_ROLE_PLAY
++	ptr Move_WISH
++	ptr Move_ASSIST
++	ptr Move_INGRAIN
++	ptr Move_SUPERPOWER
++	ptr Move_MAGIC_COAT
++	ptr Move_RECYCLE
++	ptr Move_REVENGE
++	ptr Move_BRICK_BREAK
++	ptr Move_YAWN
++	ptr Move_KNOCK_OFF
++	ptr Move_ENDEAVOR
++	ptr Move_ERUPTION
++	ptr Move_SKILL_SWAP
++	ptr Move_IMPRISON
++	ptr Move_REFRESH
++	ptr Move_GRUDGE
++	ptr Move_SNATCH
++	ptr Move_SECRET_POWER
++	ptr Move_DIVE
++	ptr Move_ARM_THRUST
++	ptr Move_CAMOUFLAGE
++	ptr Move_TAIL_GLOW
++	ptr Move_LUSTER_PURGE
++	ptr Move_MIST_BALL
++	ptr Move_FEATHER_DANCE
++	ptr Move_TEETER_DANCE
++	ptr Move_BLAZE_KICK
++	ptr Move_MUD_SPORT
++	ptr Move_ICE_BALL
++	ptr Move_NEEDLE_ARM
++	ptr Move_SLACK_OFF
++	ptr Move_HYPER_VOICE
++	ptr Move_POISON_FANG
++	ptr Move_CRUSH_CLAW
++	ptr Move_BLAST_BURN
++	ptr Move_HYDRO_CANNON
++	ptr Move_METEOR_MASH
++	ptr Move_ASTONISH
++	ptr Move_WEATHER_BALL
++	ptr Move_AROMATHERAPY
++	ptr Move_FAKE_TEARS
++	ptr Move_AIR_CUTTER
++	ptr Move_OVERHEAT
++	ptr Move_ODOR_SLEUTH
++	ptr Move_ROCK_TOMB
++	ptr Move_SILVER_WIND
++	ptr Move_METAL_SOUND
++	ptr Move_GRASS_WHISTLE
++	ptr Move_TICKLE
++	ptr Move_COSMIC_POWER
++	ptr Move_WATER_SPOUT
++	ptr Move_SIGNAL_BEAM
++	ptr Move_SHADOW_PUNCH
++	ptr Move_EXTRASENSORY
++	ptr Move_SKY_UPPERCUT
++	ptr Move_SAND_TOMB
++	ptr Move_SHEER_COLD
++	ptr Move_MUDDY_WATER
++	ptr Move_BULLET_SEED
++	ptr Move_AERIAL_ACE
++	ptr Move_ICICLE_SPEAR
++	ptr Move_IRON_DEFENSE
++	ptr Move_BLOCK
++	ptr Move_HOWL
++	ptr Move_DRAGON_CLAW
++	ptr Move_FRENZY_PLANT
++	ptr Move_BULK_UP
++	ptr Move_BOUNCE
++	ptr Move_MUD_SHOT
++	ptr Move_POISON_TAIL
++	ptr Move_COVET
++	ptr Move_VOLT_TACKLE
++	ptr Move_MAGICAL_LEAF
++	ptr Move_WATER_SPORT
++	ptr Move_CALM_MIND
++	ptr Move_LEAF_BLADE
++	ptr Move_DRAGON_DANCE
++	ptr Move_ROCK_BLAST
++	ptr Move_SHOCK_WAVE
++	ptr Move_WATER_PULSE
++	ptr Move_DOOM_DESIRE
++	ptr Move_PSYCHO_BOOST
++	ptr Move_COUNT /* cannot be reached, because last move is Psycho Boost*/
++
++	palign
+ gBattleAnims_StatusConditions::
+-	.int Status_Poison                    /* B_ANIM_STATUS_PSN*/
+-	.int Status_Confusion                 /* B_ANIM_STATUS_CONFUSION*/
+-	.int Status_Burn                      /* B_ANIM_STATUS_BRN*/
+-	.int Status_Infatuation               /* B_ANIM_STATUS_INFATUATION*/
+-	.int Status_Sleep                     /* B_ANIM_STATUS_SLP*/
+-	.int Status_Paralysis                 /* B_ANIM_STATUS_PRZ*/
+-	.int Status_Freeze                    /* B_ANIM_STATUS_FRZ*/
+-	.int Status_Curse                     /* B_ANIM_STATUS_CURSED*/
+-	.int Status_Nightmare                 /* B_ANIM_STATUS_NIGHTMARE*/
+-
+-	.align 2
++	ptr Status_Poison                    /* B_ANIM_STATUS_PSN*/
++	ptr Status_Confusion                 /* B_ANIM_STATUS_CONFUSION*/
++	ptr Status_Burn                      /* B_ANIM_STATUS_BRN*/
++	ptr Status_Infatuation               /* B_ANIM_STATUS_INFATUATION*/
++	ptr Status_Sleep                     /* B_ANIM_STATUS_SLP*/
++	ptr Status_Paralysis                 /* B_ANIM_STATUS_PRZ*/
++	ptr Status_Freeze                    /* B_ANIM_STATUS_FRZ*/
++	ptr Status_Curse                     /* B_ANIM_STATUS_CURSED*/
++	ptr Status_Nightmare                 /* B_ANIM_STATUS_NIGHTMARE*/
++
++	palign
+ gBattleAnims_General::
+-	.int General_CastformChange           /* B_ANIM_CASTFORM_CHANGE*/
+-	.int General_StatsChange              /* B_ANIM_STATS_CHANGE*/
+-	.int General_SubstituteFade           /* B_ANIM_SUBSTITUTE_FADE*/
+-	.int General_SubstituteAppear         /* B_ANIM_SUBSTITUTE_APPEAR*/
+-	.int General_PokeblockThrow           /* B_ANIM_POKEBLOCK_THROW*/
+-	.int General_ItemKnockoff             /* B_ANIM_ITEM_KNOCKOFF*/
+-	.int General_TurnTrap                 /* B_ANIM_TURN_TRAP*/
+-	.int General_HeldItemEffect           /* B_ANIM_HELD_ITEM_EFFECT*/
+-	.int General_SmokeballEscape          /* B_ANIM_SMOKEBALL_ESCAPE*/
+-	.int General_FocusBand                /* B_ANIM_FOCUS_BAND*/
+-	.int General_Rain                     /* B_ANIM_RAIN_CONTINUES*/
+-	.int General_Sun                      /* B_ANIM_SUN_CONTINUES*/
+-	.int General_Sandstorm                /* B_ANIM_SANDSTORM_CONTINUES*/
+-	.int General_Hail                     /* B_ANIM_HAIL_CONTINUES*/
+-	.int General_LeechSeedDrain           /* B_ANIM_LEECH_SEED_DRAIN*/
+-	.int General_MonHit                   /* B_ANIM_MON_HIT*/
+-	.int General_ItemSteal                /* B_ANIM_ITEM_STEAL*/
+-	.int General_SnatchMove               /* B_ANIM_SNATCH_MOVE*/
+-	.int General_FutureSightHit           /* B_ANIM_FUTURE_SIGHT_HIT*/
+-	.int General_DoomDesireHit            /* B_ANIM_DOOM_DESIRE_HIT*/
+-	.int General_FocusPunchSetUp          /* B_ANIM_FOCUS_PUNCH_SETUP*/
+-	.int General_IngrainHeal              /* B_ANIM_INGRAIN_HEAL*/
+-	.int General_WishHeal                 /* B_ANIM_WISH_HEAL*/
+-
+-	.align 2
++	ptr General_CastformChange           /* B_ANIM_CASTFORM_CHANGE*/
++	ptr General_StatsChange              /* B_ANIM_STATS_CHANGE*/
++	ptr General_SubstituteFade           /* B_ANIM_SUBSTITUTE_FADE*/
++	ptr General_SubstituteAppear         /* B_ANIM_SUBSTITUTE_APPEAR*/
++	ptr General_PokeblockThrow           /* B_ANIM_POKEBLOCK_THROW*/
++	ptr General_ItemKnockoff             /* B_ANIM_ITEM_KNOCKOFF*/
++	ptr General_TurnTrap                 /* B_ANIM_TURN_TRAP*/
++	ptr General_HeldItemEffect           /* B_ANIM_HELD_ITEM_EFFECT*/
++	ptr General_SmokeballEscape          /* B_ANIM_SMOKEBALL_ESCAPE*/
++	ptr General_FocusBand                /* B_ANIM_FOCUS_BAND*/
++	ptr General_Rain                     /* B_ANIM_RAIN_CONTINUES*/
++	ptr General_Sun                      /* B_ANIM_SUN_CONTINUES*/
++	ptr General_Sandstorm                /* B_ANIM_SANDSTORM_CONTINUES*/
++	ptr General_Hail                     /* B_ANIM_HAIL_CONTINUES*/
++	ptr General_LeechSeedDrain           /* B_ANIM_LEECH_SEED_DRAIN*/
++	ptr General_MonHit                   /* B_ANIM_MON_HIT*/
++	ptr General_ItemSteal                /* B_ANIM_ITEM_STEAL*/
++	ptr General_SnatchMove               /* B_ANIM_SNATCH_MOVE*/
++	ptr General_FutureSightHit           /* B_ANIM_FUTURE_SIGHT_HIT*/
++	ptr General_DoomDesireHit            /* B_ANIM_DOOM_DESIRE_HIT*/
++	ptr General_FocusPunchSetUp          /* B_ANIM_FOCUS_PUNCH_SETUP*/
++	ptr General_IngrainHeal              /* B_ANIM_INGRAIN_HEAL*/
++	ptr General_WishHeal                 /* B_ANIM_WISH_HEAL*/
++
++	palign
+ gBattleAnims_Special::
+-	.int Special_LevelUp                  /* B_ANIM_LVL_UP*/
+-	.int Special_SwitchOutPlayerMon       /* B_ANIM_SWITCH_OUT_PLAYER_MON*/
+-	.int Special_SwitchOutOpponentMon     /* B_ANIM_SWITCH_OUT_OPPONENT_MON*/
+-	.int Special_BallThrow                /* B_ANIM_BALL_THROW*/
+-	.int Special_BallThrowWithTrainer     /* B_ANIM_BALL_THROW_WITH_TRAINER*/
+-	.int Special_SubstituteToMon          /* B_ANIM_SUBSTITUTE_TO_MON*/
+-	.int Special_MonToSubstitute          /* B_ANIM_MON_TO_SUBSTITUTE*/
++	ptr Special_LevelUp                  /* B_ANIM_LVL_UP*/
++	ptr Special_SwitchOutPlayerMon       /* B_ANIM_SWITCH_OUT_PLAYER_MON*/
++	ptr Special_SwitchOutOpponentMon     /* B_ANIM_SWITCH_OUT_OPPONENT_MON*/
++	ptr Special_BallThrow                /* B_ANIM_BALL_THROW*/
++	ptr Special_BallThrowWithTrainer     /* B_ANIM_BALL_THROW_WITH_TRAINER*/
++	ptr Special_SubstituteToMon          /* B_ANIM_SUBSTITUTE_TO_MON*/
++	ptr Special_MonToSubstitute          /* B_ANIM_MON_TO_SUBSTITUTE*/
+ 
+ Move_NONE:
+ Move_MIRROR_MOVE:
 diff --git a/data/battle_scripts_1.s b/data/battle_scripts_1.s
 index 1f69f2904..2764ef4a7 100644
 --- a/data/battle_scripts_1.s
@@ -3526,6 +4432,107 @@ index 6fd3cdad8..a885b49cd 100644
  }
  
  static void AIStackPushVar(const u8 *var)
+diff --git a/src/battle_anim.c b/src/battle_anim.c
+index fb2817af9..127900236 100644
+--- a/src/battle_anim.c
++++ b/src/battle_anim.c
+@@ -366,8 +366,8 @@ static void Cmd_createsprite(void)
+     s16 subpriority;
+ 
+     sBattleAnimScriptPtr++;
+-    template = (const struct SpriteTemplate *)(T2_READ_32(sBattleAnimScriptPtr));
+-    sBattleAnimScriptPtr += 4;
++    template = (const struct SpriteTemplate *)ReadStreamPtr(sBattleAnimScriptPtr);
++    sBattleAnimScriptPtr += sizeof(void *);
+ 
+     argVar = sBattleAnimScriptPtr[0];
+     sBattleAnimScriptPtr++;
+@@ -421,8 +421,8 @@ static void Cmd_createvisualtask(void)
+ 
+     sBattleAnimScriptPtr++;
+ 
+-    taskFunc = (TaskFunc)T2_READ_32(sBattleAnimScriptPtr);
+-    sBattleAnimScriptPtr += 4;
++    taskFunc = (TaskFunc)ReadStreamPtr(sBattleAnimScriptPtr);
++    sBattleAnimScriptPtr += sizeof(void *);
+ 
+     taskPriority = sBattleAnimScriptPtr[0];
+     sBattleAnimScriptPtr++;
+@@ -1043,8 +1043,8 @@ static void Cmd_blendoff(void)
+ static void Cmd_call(void)
+ {
+     sBattleAnimScriptPtr++;
+-    sBattleAnimScriptRetAddr = sBattleAnimScriptPtr + 4;
+-    sBattleAnimScriptPtr = T2_READ_PTR(sBattleAnimScriptPtr);
++    sBattleAnimScriptRetAddr = sBattleAnimScriptPtr + sizeof(void *);
++    sBattleAnimScriptPtr = ReadStreamPtr(sBattleAnimScriptPtr);
+ }
+ 
+ static void Cmd_return(void)
+@@ -1074,8 +1074,8 @@ static void Cmd_choosetwoturnanim(void)
+ {
+     sBattleAnimScriptPtr++;
+     if (gAnimMoveTurn & 1)
+-        sBattleAnimScriptPtr += 4;
+-    sBattleAnimScriptPtr = T2_READ_PTR(sBattleAnimScriptPtr);
++        sBattleAnimScriptPtr += sizeof(void *);
++    sBattleAnimScriptPtr = ReadStreamPtr(sBattleAnimScriptPtr);
+ }
+ 
+ static void Cmd_jumpifmoveturn(void)
+@@ -1086,15 +1086,15 @@ static void Cmd_jumpifmoveturn(void)
+     sBattleAnimScriptPtr++;
+ 
+     if (toCheck == gAnimMoveTurn)
+-        sBattleAnimScriptPtr = T2_READ_PTR(sBattleAnimScriptPtr);
++        sBattleAnimScriptPtr = ReadStreamPtr(sBattleAnimScriptPtr);
+     else
+-        sBattleAnimScriptPtr += 4;
++        sBattleAnimScriptPtr += sizeof(void *);
+ }
+ 
+ static void Cmd_goto(void)
+ {
+     sBattleAnimScriptPtr++;
+-    sBattleAnimScriptPtr = T2_READ_PTR(sBattleAnimScriptPtr);
++    sBattleAnimScriptPtr = ReadStreamPtr(sBattleAnimScriptPtr);
+ }
+ 
+ // Uses of this function that rely on a TRUE return are expecting inBattle to not be ticked as defined in contest behavior.
+@@ -1618,8 +1618,8 @@ static void Cmd_createsoundtask(void)
+     s32 i;
+ 
+     sBattleAnimScriptPtr++;
+-    func = (TaskFunc)T2_READ_32(sBattleAnimScriptPtr);
+-    sBattleAnimScriptPtr += 4;
++    func = (TaskFunc)ReadStreamPtr(sBattleAnimScriptPtr);
++    sBattleAnimScriptPtr += sizeof(void *);
+     numArgs = sBattleAnimScriptPtr[0];
+     sBattleAnimScriptPtr++;
+     for (i = 0; i < numArgs; i++)
+@@ -1670,18 +1670,18 @@ static void Cmd_jumpargeq(void)
+     valueToCheck = T1_READ_16(sBattleAnimScriptPtr + 1);
+ 
+     if (valueToCheck == gBattleAnimArgs[argId])
+-        sBattleAnimScriptPtr = T2_READ_PTR(sBattleAnimScriptPtr + 3);
++        sBattleAnimScriptPtr = ReadStreamPtr(sBattleAnimScriptPtr + 3);
+     else
+-        sBattleAnimScriptPtr += 7;
++        sBattleAnimScriptPtr += 3 + sizeof(void *);
+ }
+ 
+ static void Cmd_jumpifcontest(void)
+ {
+     sBattleAnimScriptPtr++;
+     if (IsContest())
+-        sBattleAnimScriptPtr = T2_READ_PTR(sBattleAnimScriptPtr);
++        sBattleAnimScriptPtr = ReadStreamPtr(sBattleAnimScriptPtr);
+     else
+-        sBattleAnimScriptPtr += 4;
++        sBattleAnimScriptPtr += sizeof(void *);
+ }
+ 
+ static void Cmd_splitbgprio(void)
 diff --git a/src/battle_script_commands.c b/src/battle_script_commands.c
 index d4fae17ea..f3e6f40e3 100644
 --- a/src/battle_script_commands.c
