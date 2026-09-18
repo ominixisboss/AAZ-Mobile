@@ -91,13 +91,16 @@ and the battle script, battle anim and AI command readers.
 | map script tables (`map_script` macros) | 832 | done |
 | sound data (`m4a.inc`, `music_voice.inc`) | 3,774 | done |
 | song headers (`tools/mid2agb`) | 2,333 | done |
-| in-track song pointers (m4a player) | 8,659 | remaining |
+| in-track song pointers (`music_player.c`) | 8,659 | done |
+| field effect scripts (`field_effect.c`) | 170 | done |
+| mystery event command table | 17 | done |
 | script engine (`event_scripts`, `scrcmd.c`) | 17,438 | done |
 | battle scripts (`battle_scripts_1/2`, `battle_script_commands.c`) | 1,562 | done |
 | battle AI scripts (`battle_ai_script_commands.c`) | 1,218 | done |
 | battle anim scripts (`battle_anim.c`) | 4,231 | done |
 | contest AI scripts | 364 | blocked, see below |
-| **converted so far** | **39,881 / 48,316** | **83%** |
+| residue in `battle_ai_scripts` | 4 | remaining |
+| **converted so far** | **47,948 / 48,316** | **99.2%** |
 
 Each step is verified three ways: the arm64 object has zero remaining ABS32,
 the arm32 object is byte-for-byte unchanged in relocation count, and the

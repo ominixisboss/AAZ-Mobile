@@ -1751,6 +1751,64 @@ index 3d6441687..bb4cf5c23 100644
  	.endm
  
  	/* Warp with a fade to white. Used during the Sootopolis legendary fight.*/
+diff --git a/asm/macros/field_effect_script.inc b/asm/macros/field_effect_script.inc
+index 044f46e52..311873c9a 100644
+--- a/asm/macros/field_effect_script.inc
++++ b/asm/macros/field_effect_script.inc
+@@ -2,22 +2,22 @@
+ 
+ 	.macro field_eff_loadtiles address:req
+ 	.byte 0
+-	.int \address
++	ptr_stream \address
+ 	.endm
+ 
+ 	.macro field_eff_loadfadedpal address:req
+ 	.byte 1
+-	.int \address
++	ptr_stream \address
+ 	.endm
+ 
+ 	.macro field_eff_loadpal address:req
+ 	.byte 2
+-	.int \address
++	ptr_stream \address
+ 	.endm
+ 
+ 	.macro field_eff_callnative address:req
+ 	.byte 3
+-	.int \address
++	ptr_stream \address
+ 	.endm
+ 
+ 	.macro field_eff_end
+@@ -26,19 +26,19 @@
+ 
+ 	.macro field_eff_loadgfx_callnative tiles_address:req, palette_address:req, function_address:req
+ 	.byte 5
+-	.int \tiles_address
+-	.int \palette_address
+-	.int \function_address
++	ptr_stream \tiles_address
++	ptr_stream \palette_address
++	ptr_stream \function_address
+ 	.endm
+ 
+ 	.macro field_eff_loadtiles_callnative tiles_address:req, function_address:req
+ 	.byte 6
+-	.int \tiles_address
+-	.int \function_address
++	ptr_stream \tiles_address
++	ptr_stream \function_address
+ 	.endm
+ 
+ 	.macro field_eff_loadfadedpal_callnative palette_address:req, function_address:req
+ 	.byte 7
+-	.int \palette_address
+-	.int \function_address
++	ptr_stream \palette_address
++	ptr_stream \function_address
+ 	.endm
 diff --git a/asm/macros/m4a.inc b/asm/macros/m4a.inc
 index d6e279a6d..182355579 100644
 --- a/asm/macros/m4a.inc
@@ -3463,6 +3521,200 @@ index ba6f55c6d..f9f87150a 100644
  gStdScripts_End::
  
  	.include "data/maps/PetalburgCity/scripts.inc"
+diff --git a/data/field_effect_scripts.s b/data/field_effect_scripts.s
+index 7312f862b..57ecb6cf9 100644
+--- a/data/field_effect_scripts.s
++++ b/data/field_effect_scripts.s
+@@ -3,75 +3,75 @@
+ 
+ 	.section script_data, "aw"
+ 
+-	.align 2
++	palign
+ gFieldEffectScriptPointers::
+-	.int gFieldEffectScript_ExclamationMarkIcon1      /* FLDEFF_EXCLAMATION_MARK_ICON*/
+-	.int gFieldEffectScript_UseCutOnTallGrass         /* FLDEFF_USE_CUT_ON_GRASS*/
+-	.int gFieldEffectScript_UseCutOnTree              /* FLDEFF_USE_CUT_ON_TREE*/
+-	.int gFieldEffectScript_Shadow                    /* FLDEFF_SHADOW*/
+-	.int gFieldEffectScript_TallGrass                 /* FLDEFF_TALL_GRASS*/
+-	.int gFieldEffectScript_Ripple                    /* FLDEFF_RIPPLE*/
+-	.int gFieldEffectScript_FieldMoveShowMon          /* FLDEFF_FIELD_MOVE_SHOW_MON*/
+-	.int gFieldEffectScript_Ash                       /* FLDEFF_ASH*/
+-	.int gFieldEffectScript_SurfBlob                  /* FLDEFF_SURF_BLOB*/
+-	.int gFieldEffectScript_UseSurf                   /* FLDEFF_USE_SURF*/
+-	.int gFieldEffectScript_GroundImpactDust          /* FLDEFF_DUST*/
+-	.int gFieldEffectScript_UseSecretPowerCave        /* FLDEFF_USE_SECRET_POWER_CAVE*/
+-	.int gFieldEffectScript_JumpTallGrass             /* FLDEFF_JUMP_TALL_GRASS*/
+-	.int gFieldEffectScript_SandFootprints            /* FLDEFF_SAND_FOOTPRINTS*/
+-	.int gFieldEffectScript_JumpBigSplash             /* FLDEFF_JUMP_BIG_SPLASH*/
+-	.int gFieldEffectScript_Splash                    /* FLDEFF_SPLASH*/
+-	.int gFieldEffectScript_JumpSmallSplash           /* FLDEFF_JUMP_SMALL_SPLASH*/
+-	.int gFieldEffectScript_LongGrass                 /* FLDEFF_LONG_GRASS*/
+-	.int gFieldEffectScript_JumpLongGrass             /* FLDEFF_JUMP_LONG_GRASS*/
+-	.int gFieldEffectScript_UnusedGrass               /* FLDEFF_UNUSED_GRASS*/
+-	.int gFieldEffectScript_UnusedGrass2              /* FLDEFF_UNUSED_GRASS_2*/
+-	.int gFieldEffectScript_UnusedSand                /* FLDEFF_UNUSED_SAND*/
+-	.int gFieldEffectScript_WaterSurfacing            /* FLDEFF_WATER_SURFACING*/
+-	.int gFieldEffectScript_BerryTreeGrowthSparkle    /* FLDEFF_BERRY_TREE_GROWTH_SPARKLE*/
+-	.int gFieldEffectScript_DeepSandFootprints        /* FLDEFF_DEEP_SAND_FOOTPRINTS*/
+-	.int gFieldEffectScript_PokeCenterHeal            /* FLDEFF_POKECENTER_HEAL*/
+-	.int gFieldEffectScript_UseSecretPowerTree        /* FLDEFF_USE_SECRET_POWER_TREE*/
+-	.int gFieldEffectScript_UseSecretPowerShrub       /* FLDEFF_USE_SECRET_POWER_SHRUB*/
+-	.int gFieldEffectScript_TreeDisguise              /* FLDEFF_TREE_DISGUISE*/
+-	.int gFieldEffectScript_MountainDisguise          /* FLDEFF_MOUNTAIN_DISGUISE*/
+-	.int gFieldEffectScript_NPCUseFly                 /* FLDEFF_NPCFLY_OUT*/
+-	.int gFieldEffectScript_UseFly                    /* FLDEFF_USE_FLY*/
+-	.int gFieldEffectScript_FlyIn                     /* FLDEFF_FLY_IN*/
+-	.int gFieldEffectScript_QuestionMarkIcon          /* FLDEFF_QUESTION_MARK_ICON*/
+-	.int gFieldEffectScript_FeetInFlowingWater        /* FLDEFF_FEET_IN_FLOWING_WATER*/
+-	.int gFieldEffectScript_BikeTireTracks            /* FLDEFF_BIKE_TIRE_TRACKS*/
+-	.int gFieldEffectScript_SandDisguisePlaceholder   /* FLDEFF_SAND_DISGUISE*/
+-	.int gFieldEffectScript_UseRockSmash              /* FLDEFF_USE_ROCK_SMASH*/
+-	.int gFieldEffectScript_UseDig                    /* FLDEFF_USE_DIG*/
+-	.int gFieldEffectScript_SandPile                  /* FLDEFF_SAND_PILE*/
+-	.int gFieldEffectScript_UseStrength               /* FLDEFF_USE_STRENGTH*/
+-	.int gFieldEffectScript_ShortGrass                /* FLDEFF_SHORT_GRASS*/
+-	.int gFieldEffectScript_HotSpringsWater           /* FLDEFF_HOT_SPRINGS_WATER*/
+-	.int gFieldEffectScript_UseWaterfall              /* FLDEFF_USE_WATERFALL*/
+-	.int gFieldEffectScript_UseDive                   /* FLDEFF_USE_DIVE*/
+-	.int gFieldEffectScript_PokeballTrail             /* FLDEFF_POKEBALL_TRAIL*/
+-	.int gFieldEffectScript_HeartIcon                 /* FLDEFF_HEART_ICON*/
+-	.int gFieldEffectScript_Nop47                     /* FLDEFF_NOP_47*/
+-	.int gFieldEffectScript_Nop48                     /* FLDEFF_NOP_48*/
+-	.int gFieldEffectScript_AshPuff                   /* FLDEFF_ASH_PUFF*/
+-	.int gFieldEffectScript_AshLaunch                 /* FLDEFF_ASH_LAUNCH*/
+-	.int gFieldEffectScript_SweetScent                /* FLDEFF_SWEET_SCENT*/
+-	.int gFieldEffectScript_SandPillar                /* FLDEFF_SAND_PILLAR*/
+-	.int gFieldEffectScript_Bubbles                   /* FLDEFF_BUBBLES*/
+-	.int gFieldEffectScript_Sparkle                   /* FLDEFF_SPARKLE*/
+-	.int gFieldEffectScript_ShowSecretPowerCave       /* FLDEFF_SECRET_POWER_CAVE*/
+-	.int gFieldEffectScript_ShowSecretPowerTree       /* FLDEFF_SECRET_POWER_TREE*/
+-	.int gFieldEffectScript_ShowSecretPowerShrub      /* FLDEFF_SECRET_POWER_SHRUB*/
+-	.int gFieldEffectScript_ShowCutGrass              /* FLDEFF_CUT_GRASS*/
+-	.int gFieldEffectScript_FieldMoveShowMonInit      /* FLDEFF_FIELD_MOVE_SHOW_MON_INIT*/
+-	.int gFieldEffectScript_UsePuzzleEffect           /* FLDEFF_USE_TOMB_PUZZLE_EFFECT*/
+-	.int gFieldEffectScript_SecretBaseBootPC          /* FLDEFF_PCTURN_ON*/
+-	.int gFieldEffectScript_HallOfFameRecord          /* FLDEFF_HALL_OF_FAME_RECORD*/
+-	.int gFieldEffectScript_UseTeleport               /* FLDEFF_USE_TELEPORT*/
+-	.int gFieldEffectScript_RayquazaSpotlight         /* FLDEFF_RAYQUAZA_SPOTLIGHT*/
+-	.int gFieldEffectScript_DestroyDeoxysRock         /* FLDEFF_DESTROY_DEOXYS_ROCK*/
+-	.int gFieldEffectScript_MoveDeoxysRock            /* FLDEFF_MOVE_DEOXYS_ROCK*/
++	ptr gFieldEffectScript_ExclamationMarkIcon1      /* FLDEFF_EXCLAMATION_MARK_ICON*/
++	ptr gFieldEffectScript_UseCutOnTallGrass         /* FLDEFF_USE_CUT_ON_GRASS*/
++	ptr gFieldEffectScript_UseCutOnTree              /* FLDEFF_USE_CUT_ON_TREE*/
++	ptr gFieldEffectScript_Shadow                    /* FLDEFF_SHADOW*/
++	ptr gFieldEffectScript_TallGrass                 /* FLDEFF_TALL_GRASS*/
++	ptr gFieldEffectScript_Ripple                    /* FLDEFF_RIPPLE*/
++	ptr gFieldEffectScript_FieldMoveShowMon          /* FLDEFF_FIELD_MOVE_SHOW_MON*/
++	ptr gFieldEffectScript_Ash                       /* FLDEFF_ASH*/
++	ptr gFieldEffectScript_SurfBlob                  /* FLDEFF_SURF_BLOB*/
++	ptr gFieldEffectScript_UseSurf                   /* FLDEFF_USE_SURF*/
++	ptr gFieldEffectScript_GroundImpactDust          /* FLDEFF_DUST*/
++	ptr gFieldEffectScript_UseSecretPowerCave        /* FLDEFF_USE_SECRET_POWER_CAVE*/
++	ptr gFieldEffectScript_JumpTallGrass             /* FLDEFF_JUMP_TALL_GRASS*/
++	ptr gFieldEffectScript_SandFootprints            /* FLDEFF_SAND_FOOTPRINTS*/
++	ptr gFieldEffectScript_JumpBigSplash             /* FLDEFF_JUMP_BIG_SPLASH*/
++	ptr gFieldEffectScript_Splash                    /* FLDEFF_SPLASH*/
++	ptr gFieldEffectScript_JumpSmallSplash           /* FLDEFF_JUMP_SMALL_SPLASH*/
++	ptr gFieldEffectScript_LongGrass                 /* FLDEFF_LONG_GRASS*/
++	ptr gFieldEffectScript_JumpLongGrass             /* FLDEFF_JUMP_LONG_GRASS*/
++	ptr gFieldEffectScript_UnusedGrass               /* FLDEFF_UNUSED_GRASS*/
++	ptr gFieldEffectScript_UnusedGrass2              /* FLDEFF_UNUSED_GRASS_2*/
++	ptr gFieldEffectScript_UnusedSand                /* FLDEFF_UNUSED_SAND*/
++	ptr gFieldEffectScript_WaterSurfacing            /* FLDEFF_WATER_SURFACING*/
++	ptr gFieldEffectScript_BerryTreeGrowthSparkle    /* FLDEFF_BERRY_TREE_GROWTH_SPARKLE*/
++	ptr gFieldEffectScript_DeepSandFootprints        /* FLDEFF_DEEP_SAND_FOOTPRINTS*/
++	ptr gFieldEffectScript_PokeCenterHeal            /* FLDEFF_POKECENTER_HEAL*/
++	ptr gFieldEffectScript_UseSecretPowerTree        /* FLDEFF_USE_SECRET_POWER_TREE*/
++	ptr gFieldEffectScript_UseSecretPowerShrub       /* FLDEFF_USE_SECRET_POWER_SHRUB*/
++	ptr gFieldEffectScript_TreeDisguise              /* FLDEFF_TREE_DISGUISE*/
++	ptr gFieldEffectScript_MountainDisguise          /* FLDEFF_MOUNTAIN_DISGUISE*/
++	ptr gFieldEffectScript_NPCUseFly                 /* FLDEFF_NPCFLY_OUT*/
++	ptr gFieldEffectScript_UseFly                    /* FLDEFF_USE_FLY*/
++	ptr gFieldEffectScript_FlyIn                     /* FLDEFF_FLY_IN*/
++	ptr gFieldEffectScript_QuestionMarkIcon          /* FLDEFF_QUESTION_MARK_ICON*/
++	ptr gFieldEffectScript_FeetInFlowingWater        /* FLDEFF_FEET_IN_FLOWING_WATER*/
++	ptr gFieldEffectScript_BikeTireTracks            /* FLDEFF_BIKE_TIRE_TRACKS*/
++	ptr gFieldEffectScript_SandDisguisePlaceholder   /* FLDEFF_SAND_DISGUISE*/
++	ptr gFieldEffectScript_UseRockSmash              /* FLDEFF_USE_ROCK_SMASH*/
++	ptr gFieldEffectScript_UseDig                    /* FLDEFF_USE_DIG*/
++	ptr gFieldEffectScript_SandPile                  /* FLDEFF_SAND_PILE*/
++	ptr gFieldEffectScript_UseStrength               /* FLDEFF_USE_STRENGTH*/
++	ptr gFieldEffectScript_ShortGrass                /* FLDEFF_SHORT_GRASS*/
++	ptr gFieldEffectScript_HotSpringsWater           /* FLDEFF_HOT_SPRINGS_WATER*/
++	ptr gFieldEffectScript_UseWaterfall              /* FLDEFF_USE_WATERFALL*/
++	ptr gFieldEffectScript_UseDive                   /* FLDEFF_USE_DIVE*/
++	ptr gFieldEffectScript_PokeballTrail             /* FLDEFF_POKEBALL_TRAIL*/
++	ptr gFieldEffectScript_HeartIcon                 /* FLDEFF_HEART_ICON*/
++	ptr gFieldEffectScript_Nop47                     /* FLDEFF_NOP_47*/
++	ptr gFieldEffectScript_Nop48                     /* FLDEFF_NOP_48*/
++	ptr gFieldEffectScript_AshPuff                   /* FLDEFF_ASH_PUFF*/
++	ptr gFieldEffectScript_AshLaunch                 /* FLDEFF_ASH_LAUNCH*/
++	ptr gFieldEffectScript_SweetScent                /* FLDEFF_SWEET_SCENT*/
++	ptr gFieldEffectScript_SandPillar                /* FLDEFF_SAND_PILLAR*/
++	ptr gFieldEffectScript_Bubbles                   /* FLDEFF_BUBBLES*/
++	ptr gFieldEffectScript_Sparkle                   /* FLDEFF_SPARKLE*/
++	ptr gFieldEffectScript_ShowSecretPowerCave       /* FLDEFF_SECRET_POWER_CAVE*/
++	ptr gFieldEffectScript_ShowSecretPowerTree       /* FLDEFF_SECRET_POWER_TREE*/
++	ptr gFieldEffectScript_ShowSecretPowerShrub      /* FLDEFF_SECRET_POWER_SHRUB*/
++	ptr gFieldEffectScript_ShowCutGrass              /* FLDEFF_CUT_GRASS*/
++	ptr gFieldEffectScript_FieldMoveShowMonInit      /* FLDEFF_FIELD_MOVE_SHOW_MON_INIT*/
++	ptr gFieldEffectScript_UsePuzzleEffect           /* FLDEFF_USE_TOMB_PUZZLE_EFFECT*/
++	ptr gFieldEffectScript_SecretBaseBootPC          /* FLDEFF_PCTURN_ON*/
++	ptr gFieldEffectScript_HallOfFameRecord          /* FLDEFF_HALL_OF_FAME_RECORD*/
++	ptr gFieldEffectScript_UseTeleport               /* FLDEFF_USE_TELEPORT*/
++	ptr gFieldEffectScript_RayquazaSpotlight         /* FLDEFF_RAYQUAZA_SPOTLIGHT*/
++	ptr gFieldEffectScript_DestroyDeoxysRock         /* FLDEFF_DESTROY_DEOXYS_ROCK*/
++	ptr gFieldEffectScript_MoveDeoxysRock            /* FLDEFF_MOVE_DEOXYS_ROCK*/
+ 
+ gFieldEffectScript_ExclamationMarkIcon1::
+ 	field_eff_callnative FldEff_ExclamationMarkIcon
+diff --git a/data/mystery_event_script_cmd_table.s b/data/mystery_event_script_cmd_table.s
+index 56351c4f1..9999d574d 100644
+--- a/data/mystery_event_script_cmd_table.s
++++ b/data/mystery_event_script_cmd_table.s
+@@ -1,22 +1,23 @@
++	.include "asm/macros/ptr.inc"
+ 	.section script_data, "aw"
+ 
+-	.align 2
++	palign
+ gMysteryEventScriptCmdTable::
+-	.int MEScrCmd_nop                 /* 0x00*/
+-	.int MEScrCmd_checkcompat         /* 0x01*/
+-	.int MEScrCmd_end                 /* 0x02*/
+-	.int MEScrCmd_setmsg              /* 0x03*/
+-	.int MEScrCmd_setstatus           /* 0x04*/
+-	.int MEScrCmd_runscript           /* 0x05*/
+-	.int MEScrCmd_initramscript       /* 0x06*/
+-	.int MEScrCmd_setenigmaberry      /* 0x07*/
+-	.int MEScrCmd_giveribbon          /* 0x08*/
+-	.int MEScrCmd_givenationaldex     /* 0x09*/
+-	.int MEScrCmd_addrareword         /* 0x0a*/
+-	.int MEScrCmd_setrecordmixinggift /* 0x0b*/
+-	.int MEScrCmd_givepokemon         /* 0x0c*/
+-	.int MEScrCmd_addtrainer          /* 0x0d*/
+-	.int MEScrCmd_enableresetrtc      /* 0x0e*/
+-	.int MEScrCmd_checksum            /* 0x0f*/
+-	.int MEScrCmd_crc                 /* 0x10*/
++	ptr MEScrCmd_nop                 /* 0x00*/
++	ptr MEScrCmd_checkcompat         /* 0x01*/
++	ptr MEScrCmd_end                 /* 0x02*/
++	ptr MEScrCmd_setmsg              /* 0x03*/
++	ptr MEScrCmd_setstatus           /* 0x04*/
++	ptr MEScrCmd_runscript           /* 0x05*/
++	ptr MEScrCmd_initramscript       /* 0x06*/
++	ptr MEScrCmd_setenigmaberry      /* 0x07*/
++	ptr MEScrCmd_giveribbon          /* 0x08*/
++	ptr MEScrCmd_givenationaldex     /* 0x09*/
++	ptr MEScrCmd_addrareword         /* 0x0a*/
++	ptr MEScrCmd_setrecordmixinggift /* 0x0b*/
++	ptr MEScrCmd_givepokemon         /* 0x0c*/
++	ptr MEScrCmd_addtrainer          /* 0x0d*/
++	ptr MEScrCmd_enableresetrtc      /* 0x0e*/
++	ptr MEScrCmd_checksum            /* 0x0f*/
++	ptr MEScrCmd_crc                 /* 0x10*/
+ gMysteryEventScriptCmdTableEnd::
 diff --git a/data/script_cmd_table.inc b/data/script_cmd_table.inc
 index 206f17876..899ec7c90 100644
 --- a/data/script_cmd_table.inc
@@ -3551,6 +3803,3715 @@ index 7c180e961..b2d1d9dab 100755
  u32 ScriptReadWord(struct ScriptContext *ctx);
  void LockPlayerFieldControls(void);
  void UnlockPlayerFieldControls(void);
+diff --git a/sound/songs/se_dex_page.s b/sound/songs/se_dex_page.s
+index 2e7500277..8d3a0d409 100644
+--- a/sound/songs/se_dex_page.s
++++ b/sound/songs/se_dex_page.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_dex_page_grp, voicegroup_rs_sfx_1
+ 	.equ	se_dex_page_pri, 5
+@@ -39,7 +40,7 @@ se_dex_page_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_dex_page:
+ 	.byte	1	/* NumTrks*/
+@@ -47,8 +48,8 @@ se_dex_page:
+ 	.byte	se_dex_page_pri	/* Priority*/
+ 	.byte	se_dex_page_rev	/* Reverb.*/
+ 
+-	.int	se_dex_page_grp
++	ptr	se_dex_page_grp
+ 
+-	.int	se_dex_page_1
++	ptr	se_dex_page_1
+ 
+ 	.end
+diff --git a/sound/songs/se_dex_scroll.s b/sound/songs/se_dex_scroll.s
+index 175f237d3..e9ce0a586 100644
+--- a/sound/songs/se_dex_scroll.s
++++ b/sound/songs/se_dex_scroll.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_dex_scroll_grp, voicegroup_rs_sfx_1
+ 	.equ	se_dex_scroll_pri, 5
+@@ -31,7 +32,7 @@ se_dex_scroll_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_dex_scroll:
+ 	.byte	1	/* NumTrks*/
+@@ -39,8 +40,8 @@ se_dex_scroll:
+ 	.byte	se_dex_scroll_pri	/* Priority*/
+ 	.byte	se_dex_scroll_rev	/* Reverb.*/
+ 
+-	.int	se_dex_scroll_grp
++	ptr	se_dex_scroll_grp
+ 
+-	.int	se_dex_scroll_1
++	ptr	se_dex_scroll_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_absorb.s b/sound/songs/se_m_absorb.s
+index dc342bb70..b31d8f0aa 100644
+--- a/sound/songs/se_m_absorb.s
++++ b/sound/songs/se_m_absorb.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_absorb_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_absorb_pri, 4
+@@ -58,7 +59,7 @@ se_m_absorb_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_absorb:
+ 	.byte	1	/* NumTrks*/
+@@ -66,8 +67,8 @@ se_m_absorb:
+ 	.byte	se_m_absorb_pri	/* Priority*/
+ 	.byte	se_m_absorb_rev	/* Reverb.*/
+ 
+-	.int	se_m_absorb_grp
++	ptr	se_m_absorb_grp
+ 
+-	.int	se_m_absorb_1
++	ptr	se_m_absorb_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_absorb_2.s b/sound/songs/se_m_absorb_2.s
+index a2ebf918a..3ad23d30c 100644
+--- a/sound/songs/se_m_absorb_2.s
++++ b/sound/songs/se_m_absorb_2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_absorb_2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_absorb_2_pri, 4
+@@ -139,7 +140,7 @@ se_m_absorb_2_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_absorb_2:
+ 	.byte	2	/* NumTrks*/
+@@ -147,9 +148,9 @@ se_m_absorb_2:
+ 	.byte	se_m_absorb_2_pri	/* Priority*/
+ 	.byte	se_m_absorb_2_rev	/* Reverb.*/
+ 
+-	.int	se_m_absorb_2_grp
++	ptr	se_m_absorb_2_grp
+ 
+-	.int	se_m_absorb_2_1
+-	.int	se_m_absorb_2_2
++	ptr	se_m_absorb_2_1
++	ptr	se_m_absorb_2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_acid_armor.s b/sound/songs/se_m_acid_armor.s
+index ed512a324..c95d0788b 100644
+--- a/sound/songs/se_m_acid_armor.s
++++ b/sound/songs/se_m_acid_armor.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_acid_armor_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_acid_armor_pri, 4
+@@ -187,7 +188,7 @@ se_m_acid_armor_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_acid_armor:
+ 	.byte	1	/* NumTrks*/
+@@ -195,8 +196,8 @@ se_m_acid_armor:
+ 	.byte	se_m_acid_armor_pri	/* Priority*/
+ 	.byte	se_m_acid_armor_rev	/* Reverb.*/
+ 
+-	.int	se_m_acid_armor_grp
++	ptr	se_m_acid_armor_grp
+ 
+-	.int	se_m_acid_armor_1
++	ptr	se_m_acid_armor_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_attract.s b/sound/songs/se_m_attract.s
+index 4a4eb2848..9f447f2f4 100644
+--- a/sound/songs/se_m_attract.s
++++ b/sound/songs/se_m_attract.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_attract_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_attract_pri, 4
+@@ -110,7 +111,7 @@ se_m_attract_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_attract:
+ 	.byte	2	/* NumTrks*/
+@@ -118,9 +119,9 @@ se_m_attract:
+ 	.byte	se_m_attract_pri	/* Priority*/
+ 	.byte	se_m_attract_rev	/* Reverb.*/
+ 
+-	.int	se_m_attract_grp
++	ptr	se_m_attract_grp
+ 
+-	.int	se_m_attract_1
+-	.int	se_m_attract_2
++	ptr	se_m_attract_1
++	ptr	se_m_attract_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_attract2.s b/sound/songs/se_m_attract2.s
+index d5bc2171e..d9a550499 100644
+--- a/sound/songs/se_m_attract2.s
++++ b/sound/songs/se_m_attract2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_attract2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_attract2_pri, 4
+@@ -111,7 +112,7 @@ se_m_attract2_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_attract2:
+ 	.byte	2	/* NumTrks*/
+@@ -119,9 +120,9 @@ se_m_attract2:
+ 	.byte	se_m_attract2_pri	/* Priority*/
+ 	.byte	se_m_attract2_rev	/* Reverb.*/
+ 
+-	.int	se_m_attract2_grp
++	ptr	se_m_attract2_grp
+ 
+-	.int	se_m_attract2_1
+-	.int	se_m_attract2_2
++	ptr	se_m_attract2_1
++	ptr	se_m_attract2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_barrier.s b/sound/songs/se_m_barrier.s
+index 68a68015c..2d9d13b7d 100644
+--- a/sound/songs/se_m_barrier.s
++++ b/sound/songs/se_m_barrier.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_barrier_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_barrier_pri, 4
+@@ -216,7 +217,7 @@ se_m_barrier_2_000:
+ 	.byte	W02
+ 	.byte	PEND
+ 	.byte	PATT
+-	 .int	se_m_barrier_2_000
++	 ptr_stream	se_m_barrier_2_000
+ 	.byte		VOL   , 56*se_m_barrier_mvl/mxv
+ 	.byte	W01
+ 	.byte		        24*se_m_barrier_mvl/mxv
+@@ -260,7 +261,7 @@ se_m_barrier_2_000:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_barrier:
+ 	.byte	2	/* NumTrks*/
+@@ -268,9 +269,9 @@ se_m_barrier:
+ 	.byte	se_m_barrier_pri	/* Priority*/
+ 	.byte	se_m_barrier_rev	/* Reverb.*/
+ 
+-	.int	se_m_barrier_grp
++	ptr	se_m_barrier_grp
+ 
+-	.int	se_m_barrier_1
+-	.int	se_m_barrier_2
++	ptr	se_m_barrier_1
++	ptr	se_m_barrier_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_baton_pass.s b/sound/songs/se_m_baton_pass.s
+index b2f1270e9..6b2c42488 100644
+--- a/sound/songs/se_m_baton_pass.s
++++ b/sound/songs/se_m_baton_pass.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_baton_pass_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_baton_pass_pri, 4
+@@ -153,7 +154,7 @@ se_m_baton_pass_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_baton_pass:
+ 	.byte	2	/* NumTrks*/
+@@ -161,9 +162,9 @@ se_m_baton_pass:
+ 	.byte	se_m_baton_pass_pri	/* Priority*/
+ 	.byte	se_m_baton_pass_rev	/* Reverb.*/
+ 
+-	.int	se_m_baton_pass_grp
++	ptr	se_m_baton_pass_grp
+ 
+-	.int	se_m_baton_pass_1
+-	.int	se_m_baton_pass_2
++	ptr	se_m_baton_pass_1
++	ptr	se_m_baton_pass_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_belly_drum.s b/sound/songs/se_m_belly_drum.s
+index 02806e643..e3d284ec8 100644
+--- a/sound/songs/se_m_belly_drum.s
++++ b/sound/songs/se_m_belly_drum.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_belly_drum_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_belly_drum_pri, 4
+@@ -57,7 +58,7 @@ se_m_belly_drum_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_belly_drum:
+ 	.byte	1	/* NumTrks*/
+@@ -65,8 +66,8 @@ se_m_belly_drum:
+ 	.byte	se_m_belly_drum_pri	/* Priority*/
+ 	.byte	se_m_belly_drum_rev	/* Reverb.*/
+ 
+-	.int	se_m_belly_drum_grp
++	ptr	se_m_belly_drum_grp
+ 
+-	.int	se_m_belly_drum_1
++	ptr	se_m_belly_drum_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_bite.s b/sound/songs/se_m_bite.s
+index dbc5e01f0..810945830 100644
+--- a/sound/songs/se_m_bite.s
++++ b/sound/songs/se_m_bite.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_bite_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_bite_pri, 4
+@@ -84,7 +85,7 @@ se_m_bite_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_bite:
+ 	.byte	2	/* NumTrks*/
+@@ -92,9 +93,9 @@ se_m_bite:
+ 	.byte	se_m_bite_pri	/* Priority*/
+ 	.byte	se_m_bite_rev	/* Reverb.*/
+ 
+-	.int	se_m_bite_grp
++	ptr	se_m_bite_grp
+ 
+-	.int	se_m_bite_1
+-	.int	se_m_bite_2
++	ptr	se_m_bite_1
++	ptr	se_m_bite_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_blizzard.s b/sound/songs/se_m_blizzard.s
+index 9804f02af..ade7d7a7e 100644
+--- a/sound/songs/se_m_blizzard.s
++++ b/sound/songs/se_m_blizzard.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_blizzard_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_blizzard_pri, 4
+@@ -84,11 +85,11 @@ se_m_blizzard_1_B1:
+ 	.byte		PAN   , c_v-11
+ 	.byte	W03
+ 	.byte	GOTO
+-	 .int	se_m_blizzard_1_B1
++	 ptr_stream	se_m_blizzard_1_B1
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_blizzard:
+ 	.byte	1	/* NumTrks*/
+@@ -96,8 +97,8 @@ se_m_blizzard:
+ 	.byte	se_m_blizzard_pri	/* Priority*/
+ 	.byte	se_m_blizzard_rev	/* Reverb.*/
+ 
+-	.int	se_m_blizzard_grp
++	ptr	se_m_blizzard_grp
+ 
+-	.int	se_m_blizzard_1
++	ptr	se_m_blizzard_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_blizzard2.s b/sound/songs/se_m_blizzard2.s
+index 2aee9c438..eec0692d1 100644
+--- a/sound/songs/se_m_blizzard2.s
++++ b/sound/songs/se_m_blizzard2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_blizzard2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_blizzard2_pri, 4
+@@ -57,7 +58,7 @@ se_m_blizzard2_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_blizzard2:
+ 	.byte	1	/* NumTrks*/
+@@ -65,8 +66,8 @@ se_m_blizzard2:
+ 	.byte	se_m_blizzard2_pri	/* Priority*/
+ 	.byte	se_m_blizzard2_rev	/* Reverb.*/
+ 
+-	.int	se_m_blizzard2_grp
++	ptr	se_m_blizzard2_grp
+ 
+-	.int	se_m_blizzard2_1
++	ptr	se_m_blizzard2_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_bonemerang.s b/sound/songs/se_m_bonemerang.s
+index f621cac6e..2e671898e 100644
+--- a/sound/songs/se_m_bonemerang.s
++++ b/sound/songs/se_m_bonemerang.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_bonemerang_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_bonemerang_pri, 4
+@@ -42,7 +43,7 @@ se_m_bonemerang_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_bonemerang:
+ 	.byte	1	/* NumTrks*/
+@@ -50,8 +51,8 @@ se_m_bonemerang:
+ 	.byte	se_m_bonemerang_pri	/* Priority*/
+ 	.byte	se_m_bonemerang_rev	/* Reverb.*/
+ 
+-	.int	se_m_bonemerang_grp
++	ptr	se_m_bonemerang_grp
+ 
+-	.int	se_m_bonemerang_1
++	ptr	se_m_bonemerang_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_brick_break.s b/sound/songs/se_m_brick_break.s
+index 8aec75208..d600b2cf2 100644
+--- a/sound/songs/se_m_brick_break.s
++++ b/sound/songs/se_m_brick_break.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_brick_break_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_brick_break_pri, 4
+@@ -84,7 +85,7 @@ se_m_brick_break_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_brick_break:
+ 	.byte	2	/* NumTrks*/
+@@ -92,9 +93,9 @@ se_m_brick_break:
+ 	.byte	se_m_brick_break_pri	/* Priority*/
+ 	.byte	se_m_brick_break_rev	/* Reverb.*/
+ 
+-	.int	se_m_brick_break_grp
++	ptr	se_m_brick_break_grp
+ 
+-	.int	se_m_brick_break_1
+-	.int	se_m_brick_break_2
++	ptr	se_m_brick_break_1
++	ptr	se_m_brick_break_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_bubble.s b/sound/songs/se_m_bubble.s
+index 906bc0c6e..d6b7cd96d 100644
+--- a/sound/songs/se_m_bubble.s
++++ b/sound/songs/se_m_bubble.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_bubble_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_bubble_pri, 4
+@@ -42,7 +43,7 @@ se_m_bubble_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_bubble:
+ 	.byte	1	/* NumTrks*/
+@@ -50,8 +51,8 @@ se_m_bubble:
+ 	.byte	se_m_bubble_pri	/* Priority*/
+ 	.byte	se_m_bubble_rev	/* Reverb.*/
+ 
+-	.int	se_m_bubble_grp
++	ptr	se_m_bubble_grp
+ 
+-	.int	se_m_bubble_1
++	ptr	se_m_bubble_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_bubble2.s b/sound/songs/se_m_bubble2.s
+index 663b08268..5faac3806 100644
+--- a/sound/songs/se_m_bubble2.s
++++ b/sound/songs/se_m_bubble2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_bubble2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_bubble2_pri, 4
+@@ -44,7 +45,7 @@ se_m_bubble2_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_bubble2:
+ 	.byte	2	/* NumTrks*/
+@@ -52,9 +53,9 @@ se_m_bubble2:
+ 	.byte	se_m_bubble2_pri	/* Priority*/
+ 	.byte	se_m_bubble2_rev	/* Reverb.*/
+ 
+-	.int	se_m_bubble2_grp
++	ptr	se_m_bubble2_grp
+ 
+-	.int	se_m_bubble2_1
+-	.int	se_m_bubble2_2
++	ptr	se_m_bubble2_1
++	ptr	se_m_bubble2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_bubble3.s b/sound/songs/se_m_bubble3.s
+index a2dd6f9b3..6be205c63 100644
+--- a/sound/songs/se_m_bubble3.s
++++ b/sound/songs/se_m_bubble3.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_bubble3_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_bubble3_pri, 4
+@@ -47,7 +48,7 @@ se_m_bubble3_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_bubble3:
+ 	.byte	1	/* NumTrks*/
+@@ -55,8 +56,8 @@ se_m_bubble3:
+ 	.byte	se_m_bubble3_pri	/* Priority*/
+ 	.byte	se_m_bubble3_rev	/* Reverb.*/
+ 
+-	.int	se_m_bubble3_grp
++	ptr	se_m_bubble3_grp
+ 
+-	.int	se_m_bubble3_1
++	ptr	se_m_bubble3_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_bubble_beam.s b/sound/songs/se_m_bubble_beam.s
+index b7ca0a5ef..854772cb1 100644
+--- a/sound/songs/se_m_bubble_beam.s
++++ b/sound/songs/se_m_bubble_beam.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_bubble_beam_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_bubble_beam_pri, 4
+@@ -125,9 +126,9 @@ se_m_bubble_beam_1_001:
+ 	.byte		        c_v-7
+ 	.byte	W02
+ 	.byte	PATT
+-	 .int	se_m_bubble_beam_1_000
++	 ptr_stream	se_m_bubble_beam_1_000
+ 	.byte	PATT
+-	 .int	se_m_bubble_beam_1_001
++	 ptr_stream	se_m_bubble_beam_1_001
+ 	.byte		PAN   , c_v-6
+ 	.byte	W01
+ 	.byte		        c_v+0
+@@ -158,7 +159,7 @@ se_m_bubble_beam_1_001:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_bubble_beam:
+ 	.byte	1	/* NumTrks*/
+@@ -166,8 +167,8 @@ se_m_bubble_beam:
+ 	.byte	se_m_bubble_beam_pri	/* Priority*/
+ 	.byte	se_m_bubble_beam_rev	/* Reverb.*/
+ 
+-	.int	se_m_bubble_beam_grp
++	ptr	se_m_bubble_beam_grp
+ 
+-	.int	se_m_bubble_beam_1
++	ptr	se_m_bubble_beam_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_bubble_beam2.s b/sound/songs/se_m_bubble_beam2.s
+index 100caf7e5..375f79a4b 100644
+--- a/sound/songs/se_m_bubble_beam2.s
++++ b/sound/songs/se_m_bubble_beam2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_bubble_beam2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_bubble_beam2_pri, 4
+@@ -116,7 +117,7 @@ se_m_bubble_beam2_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_bubble_beam2:
+ 	.byte	1	/* NumTrks*/
+@@ -124,8 +125,8 @@ se_m_bubble_beam2:
+ 	.byte	se_m_bubble_beam2_pri	/* Priority*/
+ 	.byte	se_m_bubble_beam2_rev	/* Reverb.*/
+ 
+-	.int	se_m_bubble_beam2_grp
++	ptr	se_m_bubble_beam2_grp
+ 
+-	.int	se_m_bubble_beam2_1
++	ptr	se_m_bubble_beam2_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_charge.s b/sound/songs/se_m_charge.s
+index 987f590d0..d19d76163 100644
+--- a/sound/songs/se_m_charge.s
++++ b/sound/songs/se_m_charge.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_charge_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_charge_pri, 4
+@@ -171,7 +172,7 @@ se_m_charge_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_charge:
+ 	.byte	1	/* NumTrks*/
+@@ -179,8 +180,8 @@ se_m_charge:
+ 	.byte	se_m_charge_pri	/* Priority*/
+ 	.byte	se_m_charge_rev	/* Reverb.*/
+ 
+-	.int	se_m_charge_grp
++	ptr	se_m_charge_grp
+ 
+-	.int	se_m_charge_1
++	ptr	se_m_charge_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_charm.s b/sound/songs/se_m_charm.s
+index 8e92f9c3c..9bbd8e71a 100644
+--- a/sound/songs/se_m_charm.s
++++ b/sound/songs/se_m_charm.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_charm_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_charm_pri, 4
+@@ -81,7 +82,7 @@ se_m_charm_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_charm:
+ 	.byte	1	/* NumTrks*/
+@@ -89,8 +90,8 @@ se_m_charm:
+ 	.byte	se_m_charm_pri	/* Priority*/
+ 	.byte	se_m_charm_rev	/* Reverb.*/
+ 
+-	.int	se_m_charm_grp
++	ptr	se_m_charm_grp
+ 
+-	.int	se_m_charm_1
++	ptr	se_m_charm_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_confuse_ray.s b/sound/songs/se_m_confuse_ray.s
+index ab2728b29..72e005327 100644
+--- a/sound/songs/se_m_confuse_ray.s
++++ b/sound/songs/se_m_confuse_ray.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_confuse_ray_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_confuse_ray_pri, 4
+@@ -102,7 +103,7 @@ se_m_confuse_ray_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_confuse_ray:
+ 	.byte	1	/* NumTrks*/
+@@ -110,8 +111,8 @@ se_m_confuse_ray:
+ 	.byte	se_m_confuse_ray_pri	/* Priority*/
+ 	.byte	se_m_confuse_ray_rev	/* Reverb.*/
+ 
+-	.int	se_m_confuse_ray_grp
++	ptr	se_m_confuse_ray_grp
+ 
+-	.int	se_m_confuse_ray_1
++	ptr	se_m_confuse_ray_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_cosmic_power.s b/sound/songs/se_m_cosmic_power.s
+index 1be520eeb..712f61f24 100644
+--- a/sound/songs/se_m_cosmic_power.s
++++ b/sound/songs/se_m_cosmic_power.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_cosmic_power_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_cosmic_power_pri, 4
+@@ -192,7 +193,7 @@ se_m_cosmic_power_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_cosmic_power:
+ 	.byte	2	/* NumTrks*/
+@@ -200,9 +201,9 @@ se_m_cosmic_power:
+ 	.byte	se_m_cosmic_power_pri	/* Priority*/
+ 	.byte	se_m_cosmic_power_rev	/* Reverb.*/
+ 
+-	.int	se_m_cosmic_power_grp
++	ptr	se_m_cosmic_power_grp
+ 
+-	.int	se_m_cosmic_power_1
+-	.int	se_m_cosmic_power_2
++	ptr	se_m_cosmic_power_1
++	ptr	se_m_cosmic_power_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_crabhammer.s b/sound/songs/se_m_crabhammer.s
+index 53e382790..49384ff7c 100644
+--- a/sound/songs/se_m_crabhammer.s
++++ b/sound/songs/se_m_crabhammer.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_crabhammer_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_crabhammer_pri, 4
+@@ -43,7 +44,7 @@ se_m_crabhammer_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_crabhammer:
+ 	.byte	1	/* NumTrks*/
+@@ -51,8 +52,8 @@ se_m_crabhammer:
+ 	.byte	se_m_crabhammer_pri	/* Priority*/
+ 	.byte	se_m_crabhammer_rev	/* Reverb.*/
+ 
+-	.int	se_m_crabhammer_grp
++	ptr	se_m_crabhammer_grp
+ 
+-	.int	se_m_crabhammer_1
++	ptr	se_m_crabhammer_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_detect.s b/sound/songs/se_m_detect.s
+index 9722a8984..8e965790d 100644
+--- a/sound/songs/se_m_detect.s
++++ b/sound/songs/se_m_detect.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_detect_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_detect_pri, 4
+@@ -80,7 +81,7 @@ se_m_detect_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_detect:
+ 	.byte	1	/* NumTrks*/
+@@ -88,8 +89,8 @@ se_m_detect:
+ 	.byte	se_m_detect_pri	/* Priority*/
+ 	.byte	se_m_detect_rev	/* Reverb.*/
+ 
+-	.int	se_m_detect_grp
++	ptr	se_m_detect_grp
+ 
+-	.int	se_m_detect_1
++	ptr	se_m_detect_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_dig.s b/sound/songs/se_m_dig.s
+index 2fb731e06..cb7f42908 100644
+--- a/sound/songs/se_m_dig.s
++++ b/sound/songs/se_m_dig.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_dig_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_dig_pri, 4
+@@ -51,7 +52,7 @@ se_m_dig_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_dig:
+ 	.byte	1	/* NumTrks*/
+@@ -59,8 +60,8 @@ se_m_dig:
+ 	.byte	se_m_dig_pri	/* Priority*/
+ 	.byte	se_m_dig_rev	/* Reverb.*/
+ 
+-	.int	se_m_dig_grp
++	ptr	se_m_dig_grp
+ 
+-	.int	se_m_dig_1
++	ptr	se_m_dig_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_dive.s b/sound/songs/se_m_dive.s
+index a68cf41cd..0054bb270 100644
+--- a/sound/songs/se_m_dive.s
++++ b/sound/songs/se_m_dive.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_dive_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_dive_pri, 4
+@@ -107,7 +108,7 @@ se_m_dive_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_dive:
+ 	.byte	2	/* NumTrks*/
+@@ -115,9 +116,9 @@ se_m_dive:
+ 	.byte	se_m_dive_pri	/* Priority*/
+ 	.byte	se_m_dive_rev	/* Reverb.*/
+ 
+-	.int	se_m_dive_grp
++	ptr	se_m_dive_grp
+ 
+-	.int	se_m_dive_1
+-	.int	se_m_dive_2
++	ptr	se_m_dive_1
++	ptr	se_m_dive_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_dizzy_punch.s b/sound/songs/se_m_dizzy_punch.s
+index bb16708cd..b70252843 100644
+--- a/sound/songs/se_m_dizzy_punch.s
++++ b/sound/songs/se_m_dizzy_punch.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_dizzy_punch_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_dizzy_punch_pri, 4
+@@ -64,7 +65,7 @@ se_m_dizzy_punch_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_dizzy_punch:
+ 	.byte	1	/* NumTrks*/
+@@ -72,8 +73,8 @@ se_m_dizzy_punch:
+ 	.byte	se_m_dizzy_punch_pri	/* Priority*/
+ 	.byte	se_m_dizzy_punch_rev	/* Reverb.*/
+ 
+-	.int	se_m_dizzy_punch_grp
++	ptr	se_m_dizzy_punch_grp
+ 
+-	.int	se_m_dizzy_punch_1
++	ptr	se_m_dizzy_punch_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_double_team.s b/sound/songs/se_m_double_team.s
+index 67663a452..3a7a06c7f 100644
+--- a/sound/songs/se_m_double_team.s
++++ b/sound/songs/se_m_double_team.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_double_team_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_double_team_pri, 4
+@@ -56,7 +57,7 @@ se_m_double_team_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_double_team:
+ 	.byte	1	/* NumTrks*/
+@@ -64,8 +65,8 @@ se_m_double_team:
+ 	.byte	se_m_double_team_pri	/* Priority*/
+ 	.byte	se_m_double_team_rev	/* Reverb.*/
+ 
+-	.int	se_m_double_team_grp
++	ptr	se_m_double_team_grp
+ 
+-	.int	se_m_double_team_1
++	ptr	se_m_double_team_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_dragon_rage.s b/sound/songs/se_m_dragon_rage.s
+index b39b4c82a..f25e9a2cd 100644
+--- a/sound/songs/se_m_dragon_rage.s
++++ b/sound/songs/se_m_dragon_rage.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_dragon_rage_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_dragon_rage_pri, 4
+@@ -135,7 +136,7 @@ se_m_dragon_rage_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_dragon_rage:
+ 	.byte	1	/* NumTrks*/
+@@ -143,8 +144,8 @@ se_m_dragon_rage:
+ 	.byte	se_m_dragon_rage_pri	/* Priority*/
+ 	.byte	se_m_dragon_rage_rev	/* Reverb.*/
+ 
+-	.int	se_m_dragon_rage_grp
++	ptr	se_m_dragon_rage_grp
+ 
+-	.int	se_m_dragon_rage_1
++	ptr	se_m_dragon_rage_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_earthquake.s b/sound/songs/se_m_earthquake.s
+index 1ac10e2f6..4f2ed688d 100644
+--- a/sound/songs/se_m_earthquake.s
++++ b/sound/songs/se_m_earthquake.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_earthquake_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_earthquake_pri, 4
+@@ -122,31 +123,31 @@ se_m_earthquake_1_008:
+ 	.byte	W02
+ 	.byte	PEND
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_000
++	 ptr_stream	se_m_earthquake_1_000
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_001
++	 ptr_stream	se_m_earthquake_1_001
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_002
++	 ptr_stream	se_m_earthquake_1_002
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_003
++	 ptr_stream	se_m_earthquake_1_003
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_007
++	 ptr_stream	se_m_earthquake_1_007
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_008
++	 ptr_stream	se_m_earthquake_1_008
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_000
++	 ptr_stream	se_m_earthquake_1_000
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_001
++	 ptr_stream	se_m_earthquake_1_001
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_002
++	 ptr_stream	se_m_earthquake_1_002
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_003
++	 ptr_stream	se_m_earthquake_1_003
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_004
++	 ptr_stream	se_m_earthquake_1_004
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_005
++	 ptr_stream	se_m_earthquake_1_005
+ 	.byte	PATT
+-	 .int	se_m_earthquake_1_006
++	 ptr_stream	se_m_earthquake_1_006
+ 	.byte		VOL   , 106*se_m_earthquake_mvl/mxv
+ 	.byte		PAN   , c_v+0
+ 	.byte		N03   , Cn2 , v112
+@@ -228,43 +229,43 @@ se_m_earthquake_2_000:
+ 	.byte		N06
+ 	.byte	W06
+ 	.byte	PATT
+-	 .int	se_m_earthquake_2_000
++	 ptr_stream	se_m_earthquake_2_000
+ 	.byte		N06   , Bn1 , v080
+ 	.byte	W06
+ 	.byte		N06
+ 	.byte	W06
+ 	.byte	PATT
+-	 .int	se_m_earthquake_2_000
++	 ptr_stream	se_m_earthquake_2_000
+ 	.byte		N06   , Bn1 , v080
+ 	.byte	W06
+ 	.byte		N06
+ 	.byte	W06
+ 	.byte	PATT
+-	 .int	se_m_earthquake_2_000
++	 ptr_stream	se_m_earthquake_2_000
+ 	.byte		N06   , Bn1 , v080
+ 	.byte	W06
+ 	.byte		N06
+ 	.byte	W06
+ 	.byte	PATT
+-	 .int	se_m_earthquake_2_000
++	 ptr_stream	se_m_earthquake_2_000
+ 	.byte		N06   , Bn1 , v080
+ 	.byte	W06
+ 	.byte		N06
+ 	.byte	W06
+ 	.byte	PATT
+-	 .int	se_m_earthquake_2_000
++	 ptr_stream	se_m_earthquake_2_000
+ 	.byte		N06   , Bn1 , v080
+ 	.byte	W06
+ 	.byte		N06
+ 	.byte	W06
+ 	.byte	PATT
+-	 .int	se_m_earthquake_2_000
++	 ptr_stream	se_m_earthquake_2_000
+ 	.byte		N06   , Bn1 , v080
+ 	.byte	W06
+ 	.byte		N06
+ 	.byte	W06
+ 	.byte	PATT
+-	 .int	se_m_earthquake_2_000
++	 ptr_stream	se_m_earthquake_2_000
+ 	.byte		N06   , Bn1 , v080
+ 	.byte	W06
+ 	.byte		N06
+@@ -310,7 +311,7 @@ se_m_earthquake_2_000:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_earthquake:
+ 	.byte	2	/* NumTrks*/
+@@ -318,9 +319,9 @@ se_m_earthquake:
+ 	.byte	se_m_earthquake_pri	/* Priority*/
+ 	.byte	se_m_earthquake_rev	/* Reverb.*/
+ 
+-	.int	se_m_earthquake_grp
++	ptr	se_m_earthquake_grp
+ 
+-	.int	se_m_earthquake_1
+-	.int	se_m_earthquake_2
++	ptr	se_m_earthquake_1
++	ptr	se_m_earthquake_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_ember.s b/sound/songs/se_m_ember.s
+index 4095275d4..09c41174b 100644
+--- a/sound/songs/se_m_ember.s
++++ b/sound/songs/se_m_ember.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_ember_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_ember_pri, 4
+@@ -46,7 +47,7 @@ se_m_ember_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_ember:
+ 	.byte	1	/* NumTrks*/
+@@ -54,8 +55,8 @@ se_m_ember:
+ 	.byte	se_m_ember_pri	/* Priority*/
+ 	.byte	se_m_ember_rev	/* Reverb.*/
+ 
+-	.int	se_m_ember_grp
++	ptr	se_m_ember_grp
+ 
+-	.int	se_m_ember_1
++	ptr	se_m_ember_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_encore.s b/sound/songs/se_m_encore.s
+index d7bf41e7c..463064995 100644
+--- a/sound/songs/se_m_encore.s
++++ b/sound/songs/se_m_encore.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_encore_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_encore_pri, 4
+@@ -43,7 +44,7 @@ se_m_encore_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_encore:
+ 	.byte	1	/* NumTrks*/
+@@ -51,8 +52,8 @@ se_m_encore:
+ 	.byte	se_m_encore_pri	/* Priority*/
+ 	.byte	se_m_encore_rev	/* Reverb.*/
+ 
+-	.int	se_m_encore_grp
++	ptr	se_m_encore_grp
+ 
+-	.int	se_m_encore_1
++	ptr	se_m_encore_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_encore2.s b/sound/songs/se_m_encore2.s
+index cc424f7d1..801d8371c 100644
+--- a/sound/songs/se_m_encore2.s
++++ b/sound/songs/se_m_encore2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_encore2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_encore2_pri, 4
+@@ -100,17 +101,17 @@ se_m_encore2_1_000:
+ 	.byte	W02
+ 	.byte	PEND
+ 	.byte	PATT
+-	 .int	se_m_encore2_1_000
++	 ptr_stream	se_m_encore2_1_000
+ 	.byte	PATT
+-	 .int	se_m_encore2_1_000
++	 ptr_stream	se_m_encore2_1_000
+ 	.byte	PATT
+-	 .int	se_m_encore2_1_000
++	 ptr_stream	se_m_encore2_1_000
+ 	.byte	PATT
+-	 .int	se_m_encore2_1_000
++	 ptr_stream	se_m_encore2_1_000
+ 	.byte	PATT
+-	 .int	se_m_encore2_1_000
++	 ptr_stream	se_m_encore2_1_000
+ 	.byte	PATT
+-	 .int	se_m_encore2_1_000
++	 ptr_stream	se_m_encore2_1_000
+ 	.byte		VOL   , 96*se_m_encore2_mvl/mxv
+ 	.byte		PAN   , c_v+0
+ 	.byte	W01
+@@ -158,7 +159,7 @@ se_m_encore2_1_000:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_encore2:
+ 	.byte	1	/* NumTrks*/
+@@ -166,8 +167,8 @@ se_m_encore2:
+ 	.byte	se_m_encore2_pri	/* Priority*/
+ 	.byte	se_m_encore2_rev	/* Reverb.*/
+ 
+-	.int	se_m_encore2_grp
++	ptr	se_m_encore2_grp
+ 
+-	.int	se_m_encore2_1
++	ptr	se_m_encore2_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_explosion.s b/sound/songs/se_m_explosion.s
+index c746e5043..00ef45de0 100644
+--- a/sound/songs/se_m_explosion.s
++++ b/sound/songs/se_m_explosion.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_explosion_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_explosion_pri, 4
+@@ -102,7 +103,7 @@ se_m_explosion_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_explosion:
+ 	.byte	2	/* NumTrks*/
+@@ -110,9 +111,9 @@ se_m_explosion:
+ 	.byte	se_m_explosion_pri	/* Priority*/
+ 	.byte	se_m_explosion_rev	/* Reverb.*/
+ 
+-	.int	se_m_explosion_grp
++	ptr	se_m_explosion_grp
+ 
+-	.int	se_m_explosion_1
+-	.int	se_m_explosion_2
++	ptr	se_m_explosion_1
++	ptr	se_m_explosion_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_faint_attack.s b/sound/songs/se_m_faint_attack.s
+index fd72d72db..da56484bb 100644
+--- a/sound/songs/se_m_faint_attack.s
++++ b/sound/songs/se_m_faint_attack.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_faint_attack_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_faint_attack_pri, 4
+@@ -74,7 +75,7 @@ se_m_faint_attack_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_faint_attack:
+ 	.byte	1	/* NumTrks*/
+@@ -82,8 +83,8 @@ se_m_faint_attack:
+ 	.byte	se_m_faint_attack_pri	/* Priority*/
+ 	.byte	se_m_faint_attack_rev	/* Reverb.*/
+ 
+-	.int	se_m_faint_attack_grp
++	ptr	se_m_faint_attack_grp
+ 
+-	.int	se_m_faint_attack_1
++	ptr	se_m_faint_attack_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_flame_wheel.s b/sound/songs/se_m_flame_wheel.s
+index decd1d772..7204326ee 100644
+--- a/sound/songs/se_m_flame_wheel.s
++++ b/sound/songs/se_m_flame_wheel.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_flame_wheel_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_flame_wheel_pri, 4
+@@ -108,7 +109,7 @@ se_m_flame_wheel_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_flame_wheel:
+ 	.byte	2	/* NumTrks*/
+@@ -116,9 +117,9 @@ se_m_flame_wheel:
+ 	.byte	se_m_flame_wheel_pri	/* Priority*/
+ 	.byte	se_m_flame_wheel_rev	/* Reverb.*/
+ 
+-	.int	se_m_flame_wheel_grp
++	ptr	se_m_flame_wheel_grp
+ 
+-	.int	se_m_flame_wheel_1
+-	.int	se_m_flame_wheel_2
++	ptr	se_m_flame_wheel_1
++	ptr	se_m_flame_wheel_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_flame_wheel2.s b/sound/songs/se_m_flame_wheel2.s
+index d4d86553c..bbdb45503 100644
+--- a/sound/songs/se_m_flame_wheel2.s
++++ b/sound/songs/se_m_flame_wheel2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_flame_wheel2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_flame_wheel2_pri, 4
+@@ -83,7 +84,7 @@ se_m_flame_wheel2_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_flame_wheel2:
+ 	.byte	2	/* NumTrks*/
+@@ -91,9 +92,9 @@ se_m_flame_wheel2:
+ 	.byte	se_m_flame_wheel2_pri	/* Priority*/
+ 	.byte	se_m_flame_wheel2_rev	/* Reverb.*/
+ 
+-	.int	se_m_flame_wheel2_grp
++	ptr	se_m_flame_wheel2_grp
+ 
+-	.int	se_m_flame_wheel2_1
+-	.int	se_m_flame_wheel2_2
++	ptr	se_m_flame_wheel2_1
++	ptr	se_m_flame_wheel2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_flamethrower.s b/sound/songs/se_m_flamethrower.s
+index fe2eef29f..fe19c613a 100644
+--- a/sound/songs/se_m_flamethrower.s
++++ b/sound/songs/se_m_flamethrower.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_flamethrower_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_flamethrower_pri, 4
+@@ -83,11 +84,11 @@ se_m_flamethrower_1_000:
+ 	.byte	W03
+ 	.byte	PEND
+ 	.byte	PATT
+-	 .int	se_m_flamethrower_1_000
++	 ptr_stream	se_m_flamethrower_1_000
+ 	.byte	PATT
+-	 .int	se_m_flamethrower_1_000
++	 ptr_stream	se_m_flamethrower_1_000
+ 	.byte	PATT
+-	 .int	se_m_flamethrower_1_000
++	 ptr_stream	se_m_flamethrower_1_000
+ 	.byte		PAN   , c_v+4
+ 	.byte	W03
+ 	.byte		        c_v-5
+@@ -159,7 +160,7 @@ se_m_flamethrower_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_flamethrower:
+ 	.byte	2	/* NumTrks*/
+@@ -167,9 +168,9 @@ se_m_flamethrower:
+ 	.byte	se_m_flamethrower_pri	/* Priority*/
+ 	.byte	se_m_flamethrower_rev	/* Reverb.*/
+ 
+-	.int	se_m_flamethrower_grp
++	ptr	se_m_flamethrower_grp
+ 
+-	.int	se_m_flamethrower_1
+-	.int	se_m_flamethrower_2
++	ptr	se_m_flamethrower_1
++	ptr	se_m_flamethrower_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_flatter.s b/sound/songs/se_m_flatter.s
+index bb98d18a1..5dd821012 100644
+--- a/sound/songs/se_m_flatter.s
++++ b/sound/songs/se_m_flatter.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_flatter_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_flatter_pri, 4
+@@ -52,7 +53,7 @@ se_m_flatter_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_flatter:
+ 	.byte	1	/* NumTrks*/
+@@ -60,8 +61,8 @@ se_m_flatter:
+ 	.byte	se_m_flatter_pri	/* Priority*/
+ 	.byte	se_m_flatter_rev	/* Reverb.*/
+ 
+-	.int	se_m_flatter_grp
++	ptr	se_m_flatter_grp
+ 
+-	.int	se_m_flatter_1
++	ptr	se_m_flatter_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_giga_drain.s b/sound/songs/se_m_giga_drain.s
+index 2d919c2b2..c649c4734 100644
+--- a/sound/songs/se_m_giga_drain.s
++++ b/sound/songs/se_m_giga_drain.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_giga_drain_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_giga_drain_pri, 4
+@@ -66,7 +67,7 @@ se_m_giga_drain_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_giga_drain:
+ 	.byte	1	/* NumTrks*/
+@@ -74,8 +75,8 @@ se_m_giga_drain:
+ 	.byte	se_m_giga_drain_pri	/* Priority*/
+ 	.byte	se_m_giga_drain_rev	/* Reverb.*/
+ 
+-	.int	se_m_giga_drain_grp
++	ptr	se_m_giga_drain_grp
+ 
+-	.int	se_m_giga_drain_1
++	ptr	se_m_giga_drain_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_grasswhistle.s b/sound/songs/se_m_grasswhistle.s
+index 76f353dc9..635527c52 100644
+--- a/sound/songs/se_m_grasswhistle.s
++++ b/sound/songs/se_m_grasswhistle.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_grasswhistle_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_grasswhistle_pri, 4
+@@ -114,7 +115,7 @@ se_m_grasswhistle_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_grasswhistle:
+ 	.byte	2	/* NumTrks*/
+@@ -122,9 +123,9 @@ se_m_grasswhistle:
+ 	.byte	se_m_grasswhistle_pri	/* Priority*/
+ 	.byte	se_m_grasswhistle_rev	/* Reverb.*/
+ 
+-	.int	se_m_grasswhistle_grp
++	ptr	se_m_grasswhistle_grp
+ 
+-	.int	se_m_grasswhistle_1
+-	.int	se_m_grasswhistle_2
++	ptr	se_m_grasswhistle_1
++	ptr	se_m_grasswhistle_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_hail.s b/sound/songs/se_m_hail.s
+index 05346ab6d..055964730 100644
+--- a/sound/songs/se_m_hail.s
++++ b/sound/songs/se_m_hail.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_hail_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_hail_pri, 4
+@@ -82,7 +83,7 @@ se_m_hail_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_hail:
+ 	.byte	2	/* NumTrks*/
+@@ -90,9 +91,9 @@ se_m_hail:
+ 	.byte	se_m_hail_pri	/* Priority*/
+ 	.byte	se_m_hail_rev	/* Reverb.*/
+ 
+-	.int	se_m_hail_grp
++	ptr	se_m_hail_grp
+ 
+-	.int	se_m_hail_1
+-	.int	se_m_hail_2
++	ptr	se_m_hail_1
++	ptr	se_m_hail_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_harden.s b/sound/songs/se_m_harden.s
+index b85143baa..d0517ba4f 100644
+--- a/sound/songs/se_m_harden.s
++++ b/sound/songs/se_m_harden.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_harden_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_harden_pri, 4
+@@ -58,7 +59,7 @@ se_m_harden_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_harden:
+ 	.byte	2	/* NumTrks*/
+@@ -66,9 +67,9 @@ se_m_harden:
+ 	.byte	se_m_harden_pri	/* Priority*/
+ 	.byte	se_m_harden_rev	/* Reverb.*/
+ 
+-	.int	se_m_harden_grp
++	ptr	se_m_harden_grp
+ 
+-	.int	se_m_harden_1
+-	.int	se_m_harden_2
++	ptr	se_m_harden_1
++	ptr	se_m_harden_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_haze.s b/sound/songs/se_m_haze.s
+index a3fdd7be9..6dd7ab4d7 100644
+--- a/sound/songs/se_m_haze.s
++++ b/sound/songs/se_m_haze.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_haze_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_haze_pri, 4
+@@ -234,7 +235,7 @@ se_m_haze_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_haze:
+ 	.byte	2	/* NumTrks*/
+@@ -242,9 +243,9 @@ se_m_haze:
+ 	.byte	se_m_haze_pri	/* Priority*/
+ 	.byte	se_m_haze_rev	/* Reverb.*/
+ 
+-	.int	se_m_haze_grp
++	ptr	se_m_haze_grp
+ 
+-	.int	se_m_haze_1
+-	.int	se_m_haze_2
++	ptr	se_m_haze_1
++	ptr	se_m_haze_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_heal_bell.s b/sound/songs/se_m_heal_bell.s
+index 4e0d844d0..d972931ce 100644
+--- a/sound/songs/se_m_heal_bell.s
++++ b/sound/songs/se_m_heal_bell.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_heal_bell_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_heal_bell_pri, 4
+@@ -68,7 +69,7 @@ se_m_heal_bell_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_heal_bell:
+ 	.byte	1	/* NumTrks*/
+@@ -76,8 +77,8 @@ se_m_heal_bell:
+ 	.byte	se_m_heal_bell_pri	/* Priority*/
+ 	.byte	se_m_heal_bell_rev	/* Reverb.*/
+ 
+-	.int	se_m_heal_bell_grp
++	ptr	se_m_heal_bell_grp
+ 
+-	.int	se_m_heal_bell_1
++	ptr	se_m_heal_bell_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_heat_wave.s b/sound/songs/se_m_heat_wave.s
+index cda70a6c2..dc29e6cd8 100644
+--- a/sound/songs/se_m_heat_wave.s
++++ b/sound/songs/se_m_heat_wave.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_heat_wave_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_heat_wave_pri, 4
+@@ -190,7 +191,7 @@ se_m_heat_wave_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_heat_wave:
+ 	.byte	2	/* NumTrks*/
+@@ -198,9 +199,9 @@ se_m_heat_wave:
+ 	.byte	se_m_heat_wave_pri	/* Priority*/
+ 	.byte	se_m_heat_wave_rev	/* Reverb.*/
+ 
+-	.int	se_m_heat_wave_grp
++	ptr	se_m_heat_wave_grp
+ 
+-	.int	se_m_heat_wave_1
+-	.int	se_m_heat_wave_2
++	ptr	se_m_heat_wave_1
++	ptr	se_m_heat_wave_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_hydro_pump.s b/sound/songs/se_m_hydro_pump.s
+index 8005940c4..250a249ba 100644
+--- a/sound/songs/se_m_hydro_pump.s
++++ b/sound/songs/se_m_hydro_pump.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_hydro_pump_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_hydro_pump_pri, 4
+@@ -108,7 +109,7 @@ se_m_hydro_pump_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_hydro_pump:
+ 	.byte	2	/* NumTrks*/
+@@ -116,9 +117,9 @@ se_m_hydro_pump:
+ 	.byte	se_m_hydro_pump_pri	/* Priority*/
+ 	.byte	se_m_hydro_pump_rev	/* Reverb.*/
+ 
+-	.int	se_m_hydro_pump_grp
++	ptr	se_m_hydro_pump_grp
+ 
+-	.int	se_m_hydro_pump_1
+-	.int	se_m_hydro_pump_2
++	ptr	se_m_hydro_pump_1
++	ptr	se_m_hydro_pump_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_hyper_beam.s b/sound/songs/se_m_hyper_beam.s
+index 0acab0ae6..b1e0d340e 100644
+--- a/sound/songs/se_m_hyper_beam.s
++++ b/sound/songs/se_m_hyper_beam.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_hyper_beam_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_hyper_beam_pri, 4
+@@ -64,11 +65,11 @@ se_m_hyper_beam_2_000:
+ 	.byte	W04
+ 	.byte	PEND
+ 	.byte	PATT
+-	 .int	se_m_hyper_beam_2_000
++	 ptr_stream	se_m_hyper_beam_2_000
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_hyper_beam:
+ 	.byte	2	/* NumTrks*/
+@@ -76,9 +77,9 @@ se_m_hyper_beam:
+ 	.byte	se_m_hyper_beam_pri	/* Priority*/
+ 	.byte	se_m_hyper_beam_rev	/* Reverb.*/
+ 
+-	.int	se_m_hyper_beam_grp
++	ptr	se_m_hyper_beam_grp
+ 
+-	.int	se_m_hyper_beam_1
+-	.int	se_m_hyper_beam_2
++	ptr	se_m_hyper_beam_1
++	ptr	se_m_hyper_beam_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_hyper_beam2.s b/sound/songs/se_m_hyper_beam2.s
+index 88e02802d..f43c36d95 100644
+--- a/sound/songs/se_m_hyper_beam2.s
++++ b/sound/songs/se_m_hyper_beam2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_hyper_beam2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_hyper_beam2_pri, 4
+@@ -95,11 +96,11 @@ se_m_hyper_beam2_2_000:
+ 	.byte	W04
+ 	.byte	PEND
+ 	.byte	PATT
+-	 .int	se_m_hyper_beam2_2_000
++	 ptr_stream	se_m_hyper_beam2_2_000
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_hyper_beam2:
+ 	.byte	2	/* NumTrks*/
+@@ -107,9 +108,9 @@ se_m_hyper_beam2:
+ 	.byte	se_m_hyper_beam2_pri	/* Priority*/
+ 	.byte	se_m_hyper_beam2_rev	/* Reverb.*/
+ 
+-	.int	se_m_hyper_beam2_grp
++	ptr	se_m_hyper_beam2_grp
+ 
+-	.int	se_m_hyper_beam2_1
+-	.int	se_m_hyper_beam2_2
++	ptr	se_m_hyper_beam2_1
++	ptr	se_m_hyper_beam2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_icy_wind.s b/sound/songs/se_m_icy_wind.s
+index cc28f9c92..5c543e352 100644
+--- a/sound/songs/se_m_icy_wind.s
++++ b/sound/songs/se_m_icy_wind.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_icy_wind_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_icy_wind_pri, 4
+@@ -56,7 +57,7 @@ se_m_icy_wind_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_icy_wind:
+ 	.byte	2	/* NumTrks*/
+@@ -64,9 +65,9 @@ se_m_icy_wind:
+ 	.byte	se_m_icy_wind_pri	/* Priority*/
+ 	.byte	se_m_icy_wind_rev	/* Reverb.*/
+ 
+-	.int	se_m_icy_wind_grp
++	ptr	se_m_icy_wind_grp
+ 
+-	.int	se_m_icy_wind_1
+-	.int	se_m_icy_wind_2
++	ptr	se_m_icy_wind_1
++	ptr	se_m_icy_wind_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_lick.s b/sound/songs/se_m_lick.s
+index b5ba99cb3..c2453f2d5 100644
+--- a/sound/songs/se_m_lick.s
++++ b/sound/songs/se_m_lick.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_lick_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_lick_pri, 4
+@@ -114,7 +115,7 @@ se_m_lick_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_lick:
+ 	.byte	1	/* NumTrks*/
+@@ -122,8 +123,8 @@ se_m_lick:
+ 	.byte	se_m_lick_pri	/* Priority*/
+ 	.byte	se_m_lick_rev	/* Reverb.*/
+ 
+-	.int	se_m_lick_grp
++	ptr	se_m_lick_grp
+ 
+-	.int	se_m_lick_1
++	ptr	se_m_lick_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_lock_on.s b/sound/songs/se_m_lock_on.s
+index f013ac04f..4cda70f24 100644
+--- a/sound/songs/se_m_lock_on.s
++++ b/sound/songs/se_m_lock_on.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_lock_on_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_lock_on_pri, 4
+@@ -54,7 +55,7 @@ se_m_lock_on_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_lock_on:
+ 	.byte	1	/* NumTrks*/
+@@ -62,8 +63,8 @@ se_m_lock_on:
+ 	.byte	se_m_lock_on_pri	/* Priority*/
+ 	.byte	se_m_lock_on_rev	/* Reverb.*/
+ 
+-	.int	se_m_lock_on_grp
++	ptr	se_m_lock_on_grp
+ 
+-	.int	se_m_lock_on_1
++	ptr	se_m_lock_on_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_metronome.s b/sound/songs/se_m_metronome.s
+index 20223eda4..d769199c9 100644
+--- a/sound/songs/se_m_metronome.s
++++ b/sound/songs/se_m_metronome.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_metronome_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_metronome_pri, 4
+@@ -64,7 +65,7 @@ se_m_metronome_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_metronome:
+ 	.byte	1	/* NumTrks*/
+@@ -72,8 +73,8 @@ se_m_metronome:
+ 	.byte	se_m_metronome_pri	/* Priority*/
+ 	.byte	se_m_metronome_rev	/* Reverb.*/
+ 
+-	.int	se_m_metronome_grp
++	ptr	se_m_metronome_grp
+ 
+-	.int	se_m_metronome_1
++	ptr	se_m_metronome_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_milk_drink.s b/sound/songs/se_m_milk_drink.s
+index 5272ff638..b50066459 100644
+--- a/sound/songs/se_m_milk_drink.s
++++ b/sound/songs/se_m_milk_drink.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_milk_drink_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_milk_drink_pri, 4
+@@ -113,7 +114,7 @@ se_m_milk_drink_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_milk_drink:
+ 	.byte	2	/* NumTrks*/
+@@ -121,9 +122,9 @@ se_m_milk_drink:
+ 	.byte	se_m_milk_drink_pri	/* Priority*/
+ 	.byte	se_m_milk_drink_rev	/* Reverb.*/
+ 
+-	.int	se_m_milk_drink_grp
++	ptr	se_m_milk_drink_grp
+ 
+-	.int	se_m_milk_drink_1
+-	.int	se_m_milk_drink_2
++	ptr	se_m_milk_drink_1
++	ptr	se_m_milk_drink_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_minimize.s b/sound/songs/se_m_minimize.s
+index 9bfaa1b1b..ff1c07049 100644
+--- a/sound/songs/se_m_minimize.s
++++ b/sound/songs/se_m_minimize.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_minimize_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_minimize_pri, 4
+@@ -150,7 +151,7 @@ se_m_minimize_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_minimize:
+ 	.byte	1	/* NumTrks*/
+@@ -158,8 +159,8 @@ se_m_minimize:
+ 	.byte	se_m_minimize_pri	/* Priority*/
+ 	.byte	se_m_minimize_rev	/* Reverb.*/
+ 
+-	.int	se_m_minimize_grp
++	ptr	se_m_minimize_grp
+ 
+-	.int	se_m_minimize_1
++	ptr	se_m_minimize_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_mist.s b/sound/songs/se_m_mist.s
+index 5e952fd6c..af6da7375 100644
+--- a/sound/songs/se_m_mist.s
++++ b/sound/songs/se_m_mist.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_mist_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_mist_pri, 4
+@@ -79,7 +80,7 @@ se_m_mist_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_mist:
+ 	.byte	1	/* NumTrks*/
+@@ -87,8 +88,8 @@ se_m_mist:
+ 	.byte	se_m_mist_pri	/* Priority*/
+ 	.byte	se_m_mist_rev	/* Reverb.*/
+ 
+-	.int	se_m_mist_grp
++	ptr	se_m_mist_grp
+ 
+-	.int	se_m_mist_1
++	ptr	se_m_mist_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_moonlight.s b/sound/songs/se_m_moonlight.s
+index da1b1beeb..a0abe28e1 100644
+--- a/sound/songs/se_m_moonlight.s
++++ b/sound/songs/se_m_moonlight.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_moonlight_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_moonlight_pri, 4
+@@ -105,15 +106,15 @@ se_m_moonlight_1_004:
+ 	.byte		N20   , Gn6 , v100
+ 	.byte	W21
+ 	.byte	PATT
+-	 .int	se_m_moonlight_1_000
++	 ptr_stream	se_m_moonlight_1_000
+ 	.byte	PATT
+-	 .int	se_m_moonlight_1_001
++	 ptr_stream	se_m_moonlight_1_001
+ 	.byte	PATT
+-	 .int	se_m_moonlight_1_002
++	 ptr_stream	se_m_moonlight_1_002
+ 	.byte	PATT
+-	 .int	se_m_moonlight_1_003
++	 ptr_stream	se_m_moonlight_1_003
+ 	.byte	PATT
+-	 .int	se_m_moonlight_1_004
++	 ptr_stream	se_m_moonlight_1_004
+ 	.byte	FINE
+ 
+ /*********************** Track  2 **********************@*/
+@@ -192,17 +193,17 @@ se_m_moonlight_2_002:
+ 	.byte		        Gn6 , v096
+ 	.byte	W05
+ 	.byte	PATT
+-	 .int	se_m_moonlight_2_000
++	 ptr_stream	se_m_moonlight_2_000
+ 	.byte	PATT
+-	 .int	se_m_moonlight_2_001
++	 ptr_stream	se_m_moonlight_2_001
+ 	.byte	PATT
+-	 .int	se_m_moonlight_2_002
++	 ptr_stream	se_m_moonlight_2_002
+ 	.byte	W24
+ 	.byte	W24
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_moonlight:
+ 	.byte	2	/* NumTrks*/
+@@ -210,9 +211,9 @@ se_m_moonlight:
+ 	.byte	se_m_moonlight_pri	/* Priority*/
+ 	.byte	se_m_moonlight_rev	/* Reverb.*/
+ 
+-	.int	se_m_moonlight_grp
++	ptr	se_m_moonlight_grp
+ 
+-	.int	se_m_moonlight_1
+-	.int	se_m_moonlight_2
++	ptr	se_m_moonlight_1
++	ptr	se_m_moonlight_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_morning_sun.s b/sound/songs/se_m_morning_sun.s
+index 0ac145499..58a903863 100644
+--- a/sound/songs/se_m_morning_sun.s
++++ b/sound/songs/se_m_morning_sun.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_morning_sun_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_morning_sun_pri, 5
+@@ -119,7 +120,7 @@ se_m_morning_sun_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_morning_sun:
+ 	.byte	2	/* NumTrks*/
+@@ -127,9 +128,9 @@ se_m_morning_sun:
+ 	.byte	se_m_morning_sun_pri	/* Priority*/
+ 	.byte	se_m_morning_sun_rev	/* Reverb.*/
+ 
+-	.int	se_m_morning_sun_grp
++	ptr	se_m_morning_sun_grp
+ 
+-	.int	se_m_morning_sun_1
+-	.int	se_m_morning_sun_2
++	ptr	se_m_morning_sun_1
++	ptr	se_m_morning_sun_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_nightmare.s b/sound/songs/se_m_nightmare.s
+index 5c2a84cec..30e4b4f04 100644
+--- a/sound/songs/se_m_nightmare.s
++++ b/sound/songs/se_m_nightmare.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_nightmare_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_nightmare_pri, 4
+@@ -130,7 +131,7 @@ se_m_nightmare_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_nightmare:
+ 	.byte	2	/* NumTrks*/
+@@ -138,9 +139,9 @@ se_m_nightmare:
+ 	.byte	se_m_nightmare_pri	/* Priority*/
+ 	.byte	se_m_nightmare_rev	/* Reverb.*/
+ 
+-	.int	se_m_nightmare_grp
++	ptr	se_m_nightmare_grp
+ 
+-	.int	se_m_nightmare_1
+-	.int	se_m_nightmare_2
++	ptr	se_m_nightmare_1
++	ptr	se_m_nightmare_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_perish_song.s b/sound/songs/se_m_perish_song.s
+index 5cd7d210b..92e25e3c4 100644
+--- a/sound/songs/se_m_perish_song.s
++++ b/sound/songs/se_m_perish_song.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_perish_song_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_perish_song_pri, 4
+@@ -85,13 +86,13 @@ se_m_perish_song_1_003:
+ 	.byte		PAN   , c_v+4
+ 	.byte	W02
+ 	.byte	PATT
+-	 .int	se_m_perish_song_1_000
++	 ptr_stream	se_m_perish_song_1_000
+ 	.byte	PATT
+-	 .int	se_m_perish_song_1_001
++	 ptr_stream	se_m_perish_song_1_001
+ 	.byte	PATT
+-	 .int	se_m_perish_song_1_002
++	 ptr_stream	se_m_perish_song_1_002
+ 	.byte	PATT
+-	 .int	se_m_perish_song_1_003
++	 ptr_stream	se_m_perish_song_1_003
+ 	.byte		PAN   , c_v-4
+ 	.byte	W06
+ 	.byte		        c_v+0
+@@ -171,7 +172,7 @@ se_m_perish_song_2_000:
+ 	.byte		        40*se_m_perish_song_mvl/mxv
+ 	.byte	W03
+ 	.byte	PATT
+-	 .int	se_m_perish_song_2_000
++	 ptr_stream	se_m_perish_song_2_000
+ 	.byte		VOL   , 56*se_m_perish_song_mvl/mxv
+ 	.byte	W03
+ 	.byte		        62*se_m_perish_song_mvl/mxv
+@@ -205,7 +206,7 @@ se_m_perish_song_2_000:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_perish_song:
+ 	.byte	2	/* NumTrks*/
+@@ -213,9 +214,9 @@ se_m_perish_song:
+ 	.byte	se_m_perish_song_pri	/* Priority*/
+ 	.byte	se_m_perish_song_rev	/* Reverb.*/
+ 
+-	.int	se_m_perish_song_grp
++	ptr	se_m_perish_song_grp
+ 
+-	.int	se_m_perish_song_1
+-	.int	se_m_perish_song_2
++	ptr	se_m_perish_song_1
++	ptr	se_m_perish_song_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_petal_dance.s b/sound/songs/se_m_petal_dance.s
+index a8849cd95..b0bf8f72d 100644
+--- a/sound/songs/se_m_petal_dance.s
++++ b/sound/songs/se_m_petal_dance.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_petal_dance_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_petal_dance_pri, 4
+@@ -189,7 +190,7 @@ se_m_petal_dance_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_petal_dance:
+ 	.byte	2	/* NumTrks*/
+@@ -197,9 +198,9 @@ se_m_petal_dance:
+ 	.byte	se_m_petal_dance_pri	/* Priority*/
+ 	.byte	se_m_petal_dance_rev	/* Reverb.*/
+ 
+-	.int	se_m_petal_dance_grp
++	ptr	se_m_petal_dance_grp
+ 
+-	.int	se_m_petal_dance_1
+-	.int	se_m_petal_dance_2
++	ptr	se_m_petal_dance_1
++	ptr	se_m_petal_dance_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_poison_powder.s b/sound/songs/se_m_poison_powder.s
+index 4e3c431b2..06f374957 100644
+--- a/sound/songs/se_m_poison_powder.s
++++ b/sound/songs/se_m_poison_powder.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_poison_powder_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_poison_powder_pri, 4
+@@ -43,7 +44,7 @@ se_m_poison_powder_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_poison_powder:
+ 	.byte	1	/* NumTrks*/
+@@ -51,8 +52,8 @@ se_m_poison_powder:
+ 	.byte	se_m_poison_powder_pri	/* Priority*/
+ 	.byte	se_m_poison_powder_rev	/* Reverb.*/
+ 
+-	.int	se_m_poison_powder_grp
++	ptr	se_m_poison_powder_grp
+ 
+-	.int	se_m_poison_powder_1
++	ptr	se_m_poison_powder_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_psybeam.s b/sound/songs/se_m_psybeam.s
+index 9abd799e5..43f904cbf 100644
+--- a/sound/songs/se_m_psybeam.s
++++ b/sound/songs/se_m_psybeam.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_psybeam_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_psybeam_pri, 4
+@@ -128,7 +129,7 @@ se_m_psybeam_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_psybeam:
+ 	.byte	2	/* NumTrks*/
+@@ -136,9 +137,9 @@ se_m_psybeam:
+ 	.byte	se_m_psybeam_pri	/* Priority*/
+ 	.byte	se_m_psybeam_rev	/* Reverb.*/
+ 
+-	.int	se_m_psybeam_grp
++	ptr	se_m_psybeam_grp
+ 
+-	.int	se_m_psybeam_1
+-	.int	se_m_psybeam_2
++	ptr	se_m_psybeam_1
++	ptr	se_m_psybeam_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_psybeam2.s b/sound/songs/se_m_psybeam2.s
+index 8d1d54ff5..324d551f7 100644
+--- a/sound/songs/se_m_psybeam2.s
++++ b/sound/songs/se_m_psybeam2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_psybeam2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_psybeam2_pri, 4
+@@ -201,7 +202,7 @@ se_m_psybeam2_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_psybeam2:
+ 	.byte	1	/* NumTrks*/
+@@ -209,8 +210,8 @@ se_m_psybeam2:
+ 	.byte	se_m_psybeam2_pri	/* Priority*/
+ 	.byte	se_m_psybeam2_rev	/* Reverb.*/
+ 
+-	.int	se_m_psybeam2_grp
++	ptr	se_m_psybeam2_grp
+ 
+-	.int	se_m_psybeam2_1
++	ptr	se_m_psybeam2_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_rain_dance.s b/sound/songs/se_m_rain_dance.s
+index 7a66ebc78..c8f1d7142 100644
+--- a/sound/songs/se_m_rain_dance.s
++++ b/sound/songs/se_m_rain_dance.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_rain_dance_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_rain_dance_pri, 4
+@@ -101,7 +102,7 @@ se_m_rain_dance_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_rain_dance:
+ 	.byte	1	/* NumTrks*/
+@@ -109,8 +110,8 @@ se_m_rain_dance:
+ 	.byte	se_m_rain_dance_pri	/* Priority*/
+ 	.byte	se_m_rain_dance_rev	/* Reverb.*/
+ 
+-	.int	se_m_rain_dance_grp
++	ptr	se_m_rain_dance_grp
+ 
+-	.int	se_m_rain_dance_1
++	ptr	se_m_rain_dance_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_reflect.s b/sound/songs/se_m_reflect.s
+index aee58108a..5692e8865 100644
+--- a/sound/songs/se_m_reflect.s
++++ b/sound/songs/se_m_reflect.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_reflect_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_reflect_pri, 4
+@@ -207,7 +208,7 @@ se_m_reflect_2_000:
+ 	.byte	W02
+ 	.byte	PEND
+ 	.byte	PATT
+-	 .int	se_m_reflect_2_000
++	 ptr_stream	se_m_reflect_2_000
+ 	.byte		VOL   , 60*se_m_reflect_mvl/mxv
+ 	.byte	W01
+ 	.byte		        20*se_m_reflect_mvl/mxv
+@@ -251,7 +252,7 @@ se_m_reflect_2_000:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_reflect:
+ 	.byte	2	/* NumTrks*/
+@@ -259,9 +260,9 @@ se_m_reflect:
+ 	.byte	se_m_reflect_pri	/* Priority*/
+ 	.byte	se_m_reflect_rev	/* Reverb.*/
+ 
+-	.int	se_m_reflect_grp
++	ptr	se_m_reflect_grp
+ 
+-	.int	se_m_reflect_1
+-	.int	se_m_reflect_2
++	ptr	se_m_reflect_1
++	ptr	se_m_reflect_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_reversal.s b/sound/songs/se_m_reversal.s
+index 1967d7ce1..59b13f14d 100644
+--- a/sound/songs/se_m_reversal.s
++++ b/sound/songs/se_m_reversal.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_reversal_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_reversal_pri, 4
+@@ -320,7 +321,7 @@ se_m_reversal_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_reversal:
+ 	.byte	2	/* NumTrks*/
+@@ -328,9 +329,9 @@ se_m_reversal:
+ 	.byte	se_m_reversal_pri	/* Priority*/
+ 	.byte	se_m_reversal_rev	/* Reverb.*/
+ 
+-	.int	se_m_reversal_grp
++	ptr	se_m_reversal_grp
+ 
+-	.int	se_m_reversal_1
+-	.int	se_m_reversal_2
++	ptr	se_m_reversal_1
++	ptr	se_m_reversal_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_rock_throw.s b/sound/songs/se_m_rock_throw.s
+index 368358635..2535a959e 100644
+--- a/sound/songs/se_m_rock_throw.s
++++ b/sound/songs/se_m_rock_throw.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_rock_throw_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_rock_throw_pri, 4
+@@ -50,7 +51,7 @@ se_m_rock_throw_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_rock_throw:
+ 	.byte	1	/* NumTrks*/
+@@ -58,8 +59,8 @@ se_m_rock_throw:
+ 	.byte	se_m_rock_throw_pri	/* Priority*/
+ 	.byte	se_m_rock_throw_rev	/* Reverb.*/
+ 
+-	.int	se_m_rock_throw_grp
++	ptr	se_m_rock_throw_grp
+ 
+-	.int	se_m_rock_throw_1
++	ptr	se_m_rock_throw_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_sacred_fire.s b/sound/songs/se_m_sacred_fire.s
+index aeb6ab094..23662b9ca 100644
+--- a/sound/songs/se_m_sacred_fire.s
++++ b/sound/songs/se_m_sacred_fire.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_sacred_fire_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_sacred_fire_pri, 4
+@@ -89,7 +90,7 @@ se_m_sacred_fire_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_sacred_fire:
+ 	.byte	2	/* NumTrks*/
+@@ -97,9 +98,9 @@ se_m_sacred_fire:
+ 	.byte	se_m_sacred_fire_pri	/* Priority*/
+ 	.byte	se_m_sacred_fire_rev	/* Reverb.*/
+ 
+-	.int	se_m_sacred_fire_grp
++	ptr	se_m_sacred_fire_grp
+ 
+-	.int	se_m_sacred_fire_1
+-	.int	se_m_sacred_fire_2
++	ptr	se_m_sacred_fire_1
++	ptr	se_m_sacred_fire_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_sacred_fire2.s b/sound/songs/se_m_sacred_fire2.s
+index 6eb0b426d..8fb50e286 100644
+--- a/sound/songs/se_m_sacred_fire2.s
++++ b/sound/songs/se_m_sacred_fire2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_sacred_fire2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_sacred_fire2_pri, 4
+@@ -164,7 +165,7 @@ se_m_sacred_fire2_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_sacred_fire2:
+ 	.byte	2	/* NumTrks*/
+@@ -172,9 +173,9 @@ se_m_sacred_fire2:
+ 	.byte	se_m_sacred_fire2_pri	/* Priority*/
+ 	.byte	se_m_sacred_fire2_rev	/* Reverb.*/
+ 
+-	.int	se_m_sacred_fire2_grp
++	ptr	se_m_sacred_fire2_grp
+ 
+-	.int	se_m_sacred_fire2_1
+-	.int	se_m_sacred_fire2_2
++	ptr	se_m_sacred_fire2_1
++	ptr	se_m_sacred_fire2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_sand_tomb.s b/sound/songs/se_m_sand_tomb.s
+index 235d323a7..489e90d21 100644
+--- a/sound/songs/se_m_sand_tomb.s
++++ b/sound/songs/se_m_sand_tomb.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_sand_tomb_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_sand_tomb_pri, 4
+@@ -181,7 +182,7 @@ se_m_sand_tomb_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_sand_tomb:
+ 	.byte	2	/* NumTrks*/
+@@ -189,9 +190,9 @@ se_m_sand_tomb:
+ 	.byte	se_m_sand_tomb_pri	/* Priority*/
+ 	.byte	se_m_sand_tomb_rev	/* Reverb.*/
+ 
+-	.int	se_m_sand_tomb_grp
++	ptr	se_m_sand_tomb_grp
+ 
+-	.int	se_m_sand_tomb_1
+-	.int	se_m_sand_tomb_2
++	ptr	se_m_sand_tomb_1
++	ptr	se_m_sand_tomb_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_sandstorm.s b/sound/songs/se_m_sandstorm.s
+index e2565555d..8654776a4 100644
+--- a/sound/songs/se_m_sandstorm.s
++++ b/sound/songs/se_m_sandstorm.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_sandstorm_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_sandstorm_pri, 4
+@@ -230,7 +231,7 @@ se_m_sandstorm_2_000:
+ 	.byte		        Cn3 , v100
+ 	.byte	W03
+ 	.byte	PATT
+-	 .int	se_m_sandstorm_2_000
++	 ptr_stream	se_m_sandstorm_2_000
+ 	.byte	W02
+ 	.byte		N03   , Cn3 , v076
+ 	.byte	W04
+@@ -274,7 +275,7 @@ se_m_sandstorm_2_000:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_sandstorm:
+ 	.byte	2	/* NumTrks*/
+@@ -282,9 +283,9 @@ se_m_sandstorm:
+ 	.byte	se_m_sandstorm_pri	/* Priority*/
+ 	.byte	se_m_sandstorm_rev	/* Reverb.*/
+ 
+-	.int	se_m_sandstorm_grp
++	ptr	se_m_sandstorm_grp
+ 
+-	.int	se_m_sandstorm_1
+-	.int	se_m_sandstorm_2
++	ptr	se_m_sandstorm_1
++	ptr	se_m_sandstorm_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_screech.s b/sound/songs/se_m_screech.s
+index c4ecee76c..bf1ecbbc2 100644
+--- a/sound/songs/se_m_screech.s
++++ b/sound/songs/se_m_screech.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_screech_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_screech_pri, 4
+@@ -96,7 +97,7 @@ se_m_screech_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_screech:
+ 	.byte	2	/* NumTrks*/
+@@ -104,9 +105,9 @@ se_m_screech:
+ 	.byte	se_m_screech_pri	/* Priority*/
+ 	.byte	se_m_screech_rev	/* Reverb.*/
+ 
+-	.int	se_m_screech_grp
++	ptr	se_m_screech_grp
+ 
+-	.int	se_m_screech_1
+-	.int	se_m_screech_2
++	ptr	se_m_screech_1
++	ptr	se_m_screech_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_self_destruct.s b/sound/songs/se_m_self_destruct.s
+index 4f38f019a..4f9231671 100644
+--- a/sound/songs/se_m_self_destruct.s
++++ b/sound/songs/se_m_self_destruct.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_self_destruct_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_self_destruct_pri, 4
+@@ -59,7 +60,7 @@ se_m_self_destruct_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_self_destruct:
+ 	.byte	1	/* NumTrks*/
+@@ -67,8 +68,8 @@ se_m_self_destruct:
+ 	.byte	se_m_self_destruct_pri	/* Priority*/
+ 	.byte	se_m_self_destruct_rev	/* Reverb.*/
+ 
+-	.int	se_m_self_destruct_grp
++	ptr	se_m_self_destruct_grp
+ 
+-	.int	se_m_self_destruct_1
++	ptr	se_m_self_destruct_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_sing.s b/sound/songs/se_m_sing.s
+index fadea1982..9e81a6ae4 100644
+--- a/sound/songs/se_m_sing.s
++++ b/sound/songs/se_m_sing.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_sing_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_sing_pri, 4
+@@ -68,9 +69,9 @@ se_m_sing_1_001:
+ 	.byte	W06
+ 	.byte	W06
+ 	.byte	PATT
+-	 .int	se_m_sing_1_000
++	 ptr_stream	se_m_sing_1_000
+ 	.byte	PATT
+-	 .int	se_m_sing_1_001
++	 ptr_stream	se_m_sing_1_001
+ 	.byte		VOL   , 95*se_m_sing_mvl/mxv
+ 	.byte		N66   , Gn4 , v112
+ 	.byte	W06
+@@ -151,9 +152,9 @@ se_m_sing_2_001:
+ 	.byte	W06
+ 	.byte	W06
+ 	.byte	PATT
+-	 .int	se_m_sing_2_000
++	 ptr_stream	se_m_sing_2_000
+ 	.byte	PATT
+-	 .int	se_m_sing_2_001
++	 ptr_stream	se_m_sing_2_001
+ 	.byte		VOL   , 95*se_m_sing_mvl/mxv
+ 	.byte		PAN   , c_v-12
+ 	.byte		N66   , Gn4 , v060
+@@ -182,7 +183,7 @@ se_m_sing_2_001:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_sing:
+ 	.byte	2	/* NumTrks*/
+@@ -190,9 +191,9 @@ se_m_sing:
+ 	.byte	se_m_sing_pri	/* Priority*/
+ 	.byte	se_m_sing_rev	/* Reverb.*/
+ 
+-	.int	se_m_sing_grp
++	ptr	se_m_sing_grp
+ 
+-	.int	se_m_sing_1
+-	.int	se_m_sing_2
++	ptr	se_m_sing_1
++	ptr	se_m_sing_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_sketch.s b/sound/songs/se_m_sketch.s
+index b4ebc7053..e8c1c1a0b 100644
+--- a/sound/songs/se_m_sketch.s
++++ b/sound/songs/se_m_sketch.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_sketch_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_sketch_pri, 4
+@@ -53,7 +54,7 @@ se_m_sketch_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_sketch:
+ 	.byte	1	/* NumTrks*/
+@@ -61,8 +62,8 @@ se_m_sketch:
+ 	.byte	se_m_sketch_pri	/* Priority*/
+ 	.byte	se_m_sketch_rev	/* Reverb.*/
+ 
+-	.int	se_m_sketch_grp
++	ptr	se_m_sketch_grp
+ 
+-	.int	se_m_sketch_1
++	ptr	se_m_sketch_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_sky_uppercut.s b/sound/songs/se_m_sky_uppercut.s
+index 4f3f32358..7d7251ff4 100644
+--- a/sound/songs/se_m_sky_uppercut.s
++++ b/sound/songs/se_m_sky_uppercut.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_sky_uppercut_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_sky_uppercut_pri, 4
+@@ -87,7 +88,7 @@ se_m_sky_uppercut_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_sky_uppercut:
+ 	.byte	2	/* NumTrks*/
+@@ -95,9 +96,9 @@ se_m_sky_uppercut:
+ 	.byte	se_m_sky_uppercut_pri	/* Priority*/
+ 	.byte	se_m_sky_uppercut_rev	/* Reverb.*/
+ 
+-	.int	se_m_sky_uppercut_grp
++	ptr	se_m_sky_uppercut_grp
+ 
+-	.int	se_m_sky_uppercut_1
+-	.int	se_m_sky_uppercut_2
++	ptr	se_m_sky_uppercut_1
++	ptr	se_m_sky_uppercut_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_snore.s b/sound/songs/se_m_snore.s
+index 81620facc..ee1d977b5 100644
+--- a/sound/songs/se_m_snore.s
++++ b/sound/songs/se_m_snore.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_snore_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_snore_pri, 4
+@@ -89,7 +90,7 @@ se_m_snore_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_snore:
+ 	.byte	2	/* NumTrks*/
+@@ -97,9 +98,9 @@ se_m_snore:
+ 	.byte	se_m_snore_pri	/* Priority*/
+ 	.byte	se_m_snore_rev	/* Reverb.*/
+ 
+-	.int	se_m_snore_grp
++	ptr	se_m_snore_grp
+ 
+-	.int	se_m_snore_1
+-	.int	se_m_snore_2
++	ptr	se_m_snore_1
++	ptr	se_m_snore_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_solar_beam.s b/sound/songs/se_m_solar_beam.s
+index 691f702de..04bba9c26 100644
+--- a/sound/songs/se_m_solar_beam.s
++++ b/sound/songs/se_m_solar_beam.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_solar_beam_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_solar_beam_pri, 4
+@@ -149,7 +150,7 @@ se_m_solar_beam_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_solar_beam:
+ 	.byte	1	/* NumTrks*/
+@@ -157,8 +158,8 @@ se_m_solar_beam:
+ 	.byte	se_m_solar_beam_pri	/* Priority*/
+ 	.byte	se_m_solar_beam_rev	/* Reverb.*/
+ 
+-	.int	se_m_solar_beam_grp
++	ptr	se_m_solar_beam_grp
+ 
+-	.int	se_m_solar_beam_1
++	ptr	se_m_solar_beam_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_spit_up.s b/sound/songs/se_m_spit_up.s
+index 3c9ccc2f8..693b787b1 100644
+--- a/sound/songs/se_m_spit_up.s
++++ b/sound/songs/se_m_spit_up.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_spit_up_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_spit_up_pri, 4
+@@ -72,7 +73,7 @@ se_m_spit_up_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_spit_up:
+ 	.byte	2	/* NumTrks*/
+@@ -80,9 +81,9 @@ se_m_spit_up:
+ 	.byte	se_m_spit_up_pri	/* Priority*/
+ 	.byte	se_m_spit_up_rev	/* Reverb.*/
+ 
+-	.int	se_m_spit_up_grp
++	ptr	se_m_spit_up_grp
+ 
+-	.int	se_m_spit_up_1
+-	.int	se_m_spit_up_2
++	ptr	se_m_spit_up_1
++	ptr	se_m_spit_up_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_stat_decrease.s b/sound/songs/se_m_stat_decrease.s
+index 0adeb37ca..de0b822e8 100644
+--- a/sound/songs/se_m_stat_decrease.s
++++ b/sound/songs/se_m_stat_decrease.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_stat_decrease_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_stat_decrease_pri, 4
+@@ -255,7 +256,7 @@ se_m_stat_decrease_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_stat_decrease:
+ 	.byte	2	/* NumTrks*/
+@@ -263,9 +264,9 @@ se_m_stat_decrease:
+ 	.byte	se_m_stat_decrease_pri	/* Priority*/
+ 	.byte	se_m_stat_decrease_rev	/* Reverb.*/
+ 
+-	.int	se_m_stat_decrease_grp
++	ptr	se_m_stat_decrease_grp
+ 
+-	.int	se_m_stat_decrease_1
+-	.int	se_m_stat_decrease_2
++	ptr	se_m_stat_decrease_1
++	ptr	se_m_stat_decrease_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_stat_increase.s b/sound/songs/se_m_stat_increase.s
+index 2c40cc914..5f6492a25 100644
+--- a/sound/songs/se_m_stat_increase.s
++++ b/sound/songs/se_m_stat_increase.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_stat_increase_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_stat_increase_pri, 4
+@@ -267,7 +268,7 @@ se_m_stat_increase_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_stat_increase:
+ 	.byte	2	/* NumTrks*/
+@@ -275,9 +276,9 @@ se_m_stat_increase:
+ 	.byte	se_m_stat_increase_pri	/* Priority*/
+ 	.byte	se_m_stat_increase_rev	/* Reverb.*/
+ 
+-	.int	se_m_stat_increase_grp
++	ptr	se_m_stat_increase_grp
+ 
+-	.int	se_m_stat_increase_1
+-	.int	se_m_stat_increase_2
++	ptr	se_m_stat_increase_1
++	ptr	se_m_stat_increase_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_strength.s b/sound/songs/se_m_strength.s
+index 7e705a06e..f0b7acec0 100644
+--- a/sound/songs/se_m_strength.s
++++ b/sound/songs/se_m_strength.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_strength_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_strength_pri, 4
+@@ -68,7 +69,7 @@ se_m_strength_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_strength:
+ 	.byte	2	/* NumTrks*/
+@@ -76,9 +77,9 @@ se_m_strength:
+ 	.byte	se_m_strength_pri	/* Priority*/
+ 	.byte	se_m_strength_rev	/* Reverb.*/
+ 
+-	.int	se_m_strength_grp
++	ptr	se_m_strength_grp
+ 
+-	.int	se_m_strength_1
+-	.int	se_m_strength_2
++	ptr	se_m_strength_1
++	ptr	se_m_strength_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_string_shot.s b/sound/songs/se_m_string_shot.s
+index 0a52ebb3e..2496da54e 100644
+--- a/sound/songs/se_m_string_shot.s
++++ b/sound/songs/se_m_string_shot.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_string_shot_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_string_shot_pri, 4
+@@ -65,7 +66,7 @@ se_m_string_shot_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_string_shot:
+ 	.byte	1	/* NumTrks*/
+@@ -73,8 +74,8 @@ se_m_string_shot:
+ 	.byte	se_m_string_shot_pri	/* Priority*/
+ 	.byte	se_m_string_shot_rev	/* Reverb.*/
+ 
+-	.int	se_m_string_shot_grp
++	ptr	se_m_string_shot_grp
+ 
+-	.int	se_m_string_shot_1
++	ptr	se_m_string_shot_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_string_shot2.s b/sound/songs/se_m_string_shot2.s
+index ffa2a0fd6..9a46ccbe0 100644
+--- a/sound/songs/se_m_string_shot2.s
++++ b/sound/songs/se_m_string_shot2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_string_shot2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_string_shot2_pri, 4
+@@ -112,13 +113,13 @@ se_m_string_shot2_2_000:
+ 	.byte	W12
+ 	.byte	PEND
+ 	.byte	PATT
+-	 .int	se_m_string_shot2_2_000
++	 ptr_stream	se_m_string_shot2_2_000
+ 	.byte	PATT
+-	 .int	se_m_string_shot2_2_000
++	 ptr_stream	se_m_string_shot2_2_000
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_string_shot2:
+ 	.byte	2	/* NumTrks*/
+@@ -126,9 +127,9 @@ se_m_string_shot2:
+ 	.byte	se_m_string_shot2_pri	/* Priority*/
+ 	.byte	se_m_string_shot2_rev	/* Reverb.*/
+ 
+-	.int	se_m_string_shot2_grp
++	ptr	se_m_string_shot2_grp
+ 
+-	.int	se_m_string_shot2_1
+-	.int	se_m_string_shot2_2
++	ptr	se_m_string_shot2_1
++	ptr	se_m_string_shot2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_supersonic.s b/sound/songs/se_m_supersonic.s
+index a626f83bd..3c86ed22e 100644
+--- a/sound/songs/se_m_supersonic.s
++++ b/sound/songs/se_m_supersonic.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_supersonic_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_supersonic_pri, 4
+@@ -146,7 +147,7 @@ se_m_supersonic_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_supersonic:
+ 	.byte	1	/* NumTrks*/
+@@ -154,8 +155,8 @@ se_m_supersonic:
+ 	.byte	se_m_supersonic_pri	/* Priority*/
+ 	.byte	se_m_supersonic_rev	/* Reverb.*/
+ 
+-	.int	se_m_supersonic_grp
++	ptr	se_m_supersonic_grp
+ 
+-	.int	se_m_supersonic_1
++	ptr	se_m_supersonic_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_surf.s b/sound/songs/se_m_surf.s
+index 2750a7023..2a4934b26 100644
+--- a/sound/songs/se_m_surf.s
++++ b/sound/songs/se_m_surf.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_surf_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_surf_pri, 4
+@@ -94,7 +95,7 @@ se_m_surf_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_surf:
+ 	.byte	1	/* NumTrks*/
+@@ -102,8 +103,8 @@ se_m_surf:
+ 	.byte	se_m_surf_pri	/* Priority*/
+ 	.byte	se_m_surf_rev	/* Reverb.*/
+ 
+-	.int	se_m_surf_grp
++	ptr	se_m_surf_grp
+ 
+-	.int	se_m_surf_1
++	ptr	se_m_surf_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_swagger.s b/sound/songs/se_m_swagger.s
+index bce0497ba..4d93c8ef5 100644
+--- a/sound/songs/se_m_swagger.s
++++ b/sound/songs/se_m_swagger.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_swagger_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_swagger_pri, 4
+@@ -62,7 +63,7 @@ se_m_swagger_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_swagger:
+ 	.byte	1	/* NumTrks*/
+@@ -70,8 +71,8 @@ se_m_swagger:
+ 	.byte	se_m_swagger_pri	/* Priority*/
+ 	.byte	se_m_swagger_rev	/* Reverb.*/
+ 
+-	.int	se_m_swagger_grp
++	ptr	se_m_swagger_grp
+ 
+-	.int	se_m_swagger_1
++	ptr	se_m_swagger_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_swagger2.s b/sound/songs/se_m_swagger2.s
+index fbd3173c1..db243eb8d 100644
+--- a/sound/songs/se_m_swagger2.s
++++ b/sound/songs/se_m_swagger2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_swagger2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_swagger2_pri, 4
+@@ -41,7 +42,7 @@ se_m_swagger2_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_swagger2:
+ 	.byte	1	/* NumTrks*/
+@@ -49,8 +50,8 @@ se_m_swagger2:
+ 	.byte	se_m_swagger2_pri	/* Priority*/
+ 	.byte	se_m_swagger2_rev	/* Reverb.*/
+ 
+-	.int	se_m_swagger2_grp
++	ptr	se_m_swagger2_grp
+ 
+-	.int	se_m_swagger2_1
++	ptr	se_m_swagger2_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_sweet_scent.s b/sound/songs/se_m_sweet_scent.s
+index d0a8e4852..2b3ae062e 100644
+--- a/sound/songs/se_m_sweet_scent.s
++++ b/sound/songs/se_m_sweet_scent.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_sweet_scent_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_sweet_scent_pri, 4
+@@ -176,7 +177,7 @@ se_m_sweet_scent_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_sweet_scent:
+ 	.byte	2	/* NumTrks*/
+@@ -184,9 +185,9 @@ se_m_sweet_scent:
+ 	.byte	se_m_sweet_scent_pri	/* Priority*/
+ 	.byte	se_m_sweet_scent_rev	/* Reverb.*/
+ 
+-	.int	se_m_sweet_scent_grp
++	ptr	se_m_sweet_scent_grp
+ 
+-	.int	se_m_sweet_scent_1
+-	.int	se_m_sweet_scent_2
++	ptr	se_m_sweet_scent_1
++	ptr	se_m_sweet_scent_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_swift.s b/sound/songs/se_m_swift.s
+index 886425f02..7359abf15 100644
+--- a/sound/songs/se_m_swift.s
++++ b/sound/songs/se_m_swift.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_swift_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_swift_pri, 4
+@@ -95,7 +96,7 @@ se_m_swift_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_swift:
+ 	.byte	2	/* NumTrks*/
+@@ -103,9 +104,9 @@ se_m_swift:
+ 	.byte	se_m_swift_pri	/* Priority*/
+ 	.byte	se_m_swift_rev	/* Reverb.*/
+ 
+-	.int	se_m_swift_grp
++	ptr	se_m_swift_grp
+ 
+-	.int	se_m_swift_1
+-	.int	se_m_swift_2
++	ptr	se_m_swift_1
++	ptr	se_m_swift_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_teeter_dance.s b/sound/songs/se_m_teeter_dance.s
+index 2d93b74dd..b3aaf276d 100644
+--- a/sound/songs/se_m_teeter_dance.s
++++ b/sound/songs/se_m_teeter_dance.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_teeter_dance_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_teeter_dance_pri, 4
+@@ -105,7 +106,7 @@ se_m_teeter_dance_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_teeter_dance:
+ 	.byte	2	/* NumTrks*/
+@@ -113,9 +114,9 @@ se_m_teeter_dance:
+ 	.byte	se_m_teeter_dance_pri	/* Priority*/
+ 	.byte	se_m_teeter_dance_rev	/* Reverb.*/
+ 
+-	.int	se_m_teeter_dance_grp
++	ptr	se_m_teeter_dance_grp
+ 
+-	.int	se_m_teeter_dance_1
+-	.int	se_m_teeter_dance_2
++	ptr	se_m_teeter_dance_1
++	ptr	se_m_teeter_dance_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_teleport.s b/sound/songs/se_m_teleport.s
+index 68c7d8f50..9a74d3771 100644
+--- a/sound/songs/se_m_teleport.s
++++ b/sound/songs/se_m_teleport.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_teleport_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_teleport_pri, 4
+@@ -150,7 +151,7 @@ se_m_teleport_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_teleport:
+ 	.byte	1	/* NumTrks*/
+@@ -158,8 +159,8 @@ se_m_teleport:
+ 	.byte	se_m_teleport_pri	/* Priority*/
+ 	.byte	se_m_teleport_rev	/* Reverb.*/
+ 
+-	.int	se_m_teleport_grp
++	ptr	se_m_teleport_grp
+ 
+-	.int	se_m_teleport_1
++	ptr	se_m_teleport_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_thunder_wave.s b/sound/songs/se_m_thunder_wave.s
+index f800f145f..52dc18f55 100644
+--- a/sound/songs/se_m_thunder_wave.s
++++ b/sound/songs/se_m_thunder_wave.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_thunder_wave_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_thunder_wave_pri, 4
+@@ -90,7 +91,7 @@ se_m_thunder_wave_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_thunder_wave:
+ 	.byte	2	/* NumTrks*/
+@@ -98,9 +99,9 @@ se_m_thunder_wave:
+ 	.byte	se_m_thunder_wave_pri	/* Priority*/
+ 	.byte	se_m_thunder_wave_rev	/* Reverb.*/
+ 
+-	.int	se_m_thunder_wave_grp
++	ptr	se_m_thunder_wave_grp
+ 
+-	.int	se_m_thunder_wave_1
+-	.int	se_m_thunder_wave_2
++	ptr	se_m_thunder_wave_1
++	ptr	se_m_thunder_wave_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_thunderbolt.s b/sound/songs/se_m_thunderbolt.s
+index ed6ed9197..ae48eebde 100644
+--- a/sound/songs/se_m_thunderbolt.s
++++ b/sound/songs/se_m_thunderbolt.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_thunderbolt_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_thunderbolt_pri, 4
+@@ -101,7 +102,7 @@ se_m_thunderbolt_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_thunderbolt:
+ 	.byte	2	/* NumTrks*/
+@@ -109,9 +110,9 @@ se_m_thunderbolt:
+ 	.byte	se_m_thunderbolt_pri	/* Priority*/
+ 	.byte	se_m_thunderbolt_rev	/* Reverb.*/
+ 
+-	.int	se_m_thunderbolt_grp
++	ptr	se_m_thunderbolt_grp
+ 
+-	.int	se_m_thunderbolt_1
+-	.int	se_m_thunderbolt_2
++	ptr	se_m_thunderbolt_1
++	ptr	se_m_thunderbolt_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_thunderbolt2.s b/sound/songs/se_m_thunderbolt2.s
+index a1fa6d32d..31119516b 100644
+--- a/sound/songs/se_m_thunderbolt2.s
++++ b/sound/songs/se_m_thunderbolt2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_thunderbolt2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_thunderbolt2_pri, 4
+@@ -69,7 +70,7 @@ se_m_thunderbolt2_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_thunderbolt2:
+ 	.byte	2	/* NumTrks*/
+@@ -77,9 +78,9 @@ se_m_thunderbolt2:
+ 	.byte	se_m_thunderbolt2_pri	/* Priority*/
+ 	.byte	se_m_thunderbolt2_rev	/* Reverb.*/
+ 
+-	.int	se_m_thunderbolt2_grp
++	ptr	se_m_thunderbolt2_grp
+ 
+-	.int	se_m_thunderbolt2_1
+-	.int	se_m_thunderbolt2_2
++	ptr	se_m_thunderbolt2_1
++	ptr	se_m_thunderbolt2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_toxic.s b/sound/songs/se_m_toxic.s
+index 9bf38fd96..05518e1cf 100644
+--- a/sound/songs/se_m_toxic.s
++++ b/sound/songs/se_m_toxic.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_toxic_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_toxic_pri, 4
+@@ -72,7 +73,7 @@ se_m_toxic_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_toxic:
+ 	.byte	1	/* NumTrks*/
+@@ -80,8 +81,8 @@ se_m_toxic:
+ 	.byte	se_m_toxic_pri	/* Priority*/
+ 	.byte	se_m_toxic_rev	/* Reverb.*/
+ 
+-	.int	se_m_toxic_grp
++	ptr	se_m_toxic_grp
+ 
+-	.int	se_m_toxic_1
++	ptr	se_m_toxic_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_tri_attack.s b/sound/songs/se_m_tri_attack.s
+index 315456d4a..740aa4932 100644
+--- a/sound/songs/se_m_tri_attack.s
++++ b/sound/songs/se_m_tri_attack.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_tri_attack_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_tri_attack_pri, 4
+@@ -83,7 +84,7 @@ se_m_tri_attack_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_tri_attack:
+ 	.byte	2	/* NumTrks*/
+@@ -91,9 +92,9 @@ se_m_tri_attack:
+ 	.byte	se_m_tri_attack_pri	/* Priority*/
+ 	.byte	se_m_tri_attack_rev	/* Reverb.*/
+ 
+-	.int	se_m_tri_attack_grp
++	ptr	se_m_tri_attack_grp
+ 
+-	.int	se_m_tri_attack_1
+-	.int	se_m_tri_attack_2
++	ptr	se_m_tri_attack_1
++	ptr	se_m_tri_attack_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_tri_attack2.s b/sound/songs/se_m_tri_attack2.s
+index cf9899971..f209e3191 100644
+--- a/sound/songs/se_m_tri_attack2.s
++++ b/sound/songs/se_m_tri_attack2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_tri_attack2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_tri_attack2_pri, 4
+@@ -108,7 +109,7 @@ se_m_tri_attack2_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_tri_attack2:
+ 	.byte	2	/* NumTrks*/
+@@ -116,9 +117,9 @@ se_m_tri_attack2:
+ 	.byte	se_m_tri_attack2_pri	/* Priority*/
+ 	.byte	se_m_tri_attack2_rev	/* Reverb.*/
+ 
+-	.int	se_m_tri_attack2_grp
++	ptr	se_m_tri_attack2_grp
+ 
+-	.int	se_m_tri_attack2_1
+-	.int	se_m_tri_attack2_2
++	ptr	se_m_tri_attack2_1
++	ptr	se_m_tri_attack2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_twister.s b/sound/songs/se_m_twister.s
+index 09810f066..fcb90afea 100644
+--- a/sound/songs/se_m_twister.s
++++ b/sound/songs/se_m_twister.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_twister_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_twister_pri, 4
+@@ -194,7 +195,7 @@ se_m_twister_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_twister:
+ 	.byte	2	/* NumTrks*/
+@@ -202,9 +203,9 @@ se_m_twister:
+ 	.byte	se_m_twister_pri	/* Priority*/
+ 	.byte	se_m_twister_rev	/* Reverb.*/
+ 
+-	.int	se_m_twister_grp
++	ptr	se_m_twister_grp
+ 
+-	.int	se_m_twister_1
+-	.int	se_m_twister_2
++	ptr	se_m_twister_1
++	ptr	se_m_twister_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_uproar.s b/sound/songs/se_m_uproar.s
+index f5d479a69..9f255bec3 100644
+--- a/sound/songs/se_m_uproar.s
++++ b/sound/songs/se_m_uproar.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_uproar_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_uproar_pri, 4
+@@ -71,7 +72,7 @@ se_m_uproar_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_uproar:
+ 	.byte	1	/* NumTrks*/
+@@ -79,8 +80,8 @@ se_m_uproar:
+ 	.byte	se_m_uproar_pri	/* Priority*/
+ 	.byte	se_m_uproar_rev	/* Reverb.*/
+ 
+-	.int	se_m_uproar_grp
++	ptr	se_m_uproar_grp
+ 
+-	.int	se_m_uproar_1
++	ptr	se_m_uproar_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_vital_throw.s b/sound/songs/se_m_vital_throw.s
+index da75d4e91..f1603427f 100644
+--- a/sound/songs/se_m_vital_throw.s
++++ b/sound/songs/se_m_vital_throw.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_vital_throw_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_vital_throw_pri, 4
+@@ -59,7 +60,7 @@ se_m_vital_throw_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_vital_throw:
+ 	.byte	2	/* NumTrks*/
+@@ -67,9 +68,9 @@ se_m_vital_throw:
+ 	.byte	se_m_vital_throw_pri	/* Priority*/
+ 	.byte	se_m_vital_throw_rev	/* Reverb.*/
+ 
+-	.int	se_m_vital_throw_grp
++	ptr	se_m_vital_throw_grp
+ 
+-	.int	se_m_vital_throw_1
+-	.int	se_m_vital_throw_2
++	ptr	se_m_vital_throw_1
++	ptr	se_m_vital_throw_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_vital_throw2.s b/sound/songs/se_m_vital_throw2.s
+index e73357f39..5917a1cb8 100644
+--- a/sound/songs/se_m_vital_throw2.s
++++ b/sound/songs/se_m_vital_throw2.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_vital_throw2_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_vital_throw2_pri, 4
+@@ -92,7 +93,7 @@ se_m_vital_throw2_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_vital_throw2:
+ 	.byte	2	/* NumTrks*/
+@@ -100,9 +101,9 @@ se_m_vital_throw2:
+ 	.byte	se_m_vital_throw2_pri	/* Priority*/
+ 	.byte	se_m_vital_throw2_rev	/* Reverb.*/
+ 
+-	.int	se_m_vital_throw2_grp
++	ptr	se_m_vital_throw2_grp
+ 
+-	.int	se_m_vital_throw2_1
+-	.int	se_m_vital_throw2_2
++	ptr	se_m_vital_throw2_1
++	ptr	se_m_vital_throw2_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_waterfall.s b/sound/songs/se_m_waterfall.s
+index 1e3f8f559..b4d074255 100644
+--- a/sound/songs/se_m_waterfall.s
++++ b/sound/songs/se_m_waterfall.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_waterfall_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_waterfall_pri, 4
+@@ -109,7 +110,7 @@ se_m_waterfall_2_000:
+ 	.byte	W06
+ 	.byte	PEND
+ 	.byte	PATT
+-	 .int	se_m_waterfall_2_000
++	 ptr_stream	se_m_waterfall_2_000
+ 	.byte		N06   , Cn3 , v032
+ 	.byte	W06
+ 	.byte		        Gn2
+@@ -121,7 +122,7 @@ se_m_waterfall_2_000:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_waterfall:
+ 	.byte	2	/* NumTrks*/
+@@ -129,9 +130,9 @@ se_m_waterfall:
+ 	.byte	se_m_waterfall_pri	/* Priority*/
+ 	.byte	se_m_waterfall_rev	/* Reverb.*/
+ 
+-	.int	se_m_waterfall_grp
++	ptr	se_m_waterfall_grp
+ 
+-	.int	se_m_waterfall_1
+-	.int	se_m_waterfall_2
++	ptr	se_m_waterfall_1
++	ptr	se_m_waterfall_2
+ 
+ 	.end
+diff --git a/sound/songs/se_m_whirlpool.s b/sound/songs/se_m_whirlpool.s
+index a218b9b77..ebe6cb5de 100644
+--- a/sound/songs/se_m_whirlpool.s
++++ b/sound/songs/se_m_whirlpool.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_whirlpool_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_whirlpool_pri, 4
+@@ -110,7 +111,7 @@ se_m_whirlpool_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_whirlpool:
+ 	.byte	1	/* NumTrks*/
+@@ -118,8 +119,8 @@ se_m_whirlpool:
+ 	.byte	se_m_whirlpool_pri	/* Priority*/
+ 	.byte	se_m_whirlpool_rev	/* Reverb.*/
+ 
+-	.int	se_m_whirlpool_grp
++	ptr	se_m_whirlpool_grp
+ 
+-	.int	se_m_whirlpool_1
++	ptr	se_m_whirlpool_1
+ 
+ 	.end
+diff --git a/sound/songs/se_m_yawn.s b/sound/songs/se_m_yawn.s
+index 3d861edfa..e7e977cde 100644
+--- a/sound/songs/se_m_yawn.s
++++ b/sound/songs/se_m_yawn.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_m_yawn_grp, voicegroup_rs_sfx_2
+ 	.equ	se_m_yawn_pri, 4
+@@ -111,7 +112,7 @@ se_m_yawn_2:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_m_yawn:
+ 	.byte	2	/* NumTrks*/
+@@ -119,9 +120,9 @@ se_m_yawn:
+ 	.byte	se_m_yawn_pri	/* Priority*/
+ 	.byte	se_m_yawn_rev	/* Reverb.*/
+ 
+-	.int	se_m_yawn_grp
++	ptr	se_m_yawn_grp
+ 
+-	.int	se_m_yawn_1
+-	.int	se_m_yawn_2
++	ptr	se_m_yawn_1
++	ptr	se_m_yawn_2
+ 
+ 	.end
+diff --git a/sound/songs/se_wall_hit.s b/sound/songs/se_wall_hit.s
+index ee152e673..3d87d7956 100644
+--- a/sound/songs/se_wall_hit.s
++++ b/sound/songs/se_wall_hit.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_wall_hit_grp, voicegroup_rs_sfx_1
+ 	.equ	se_wall_hit_pri, 2
+@@ -26,7 +27,7 @@ se_wall_hit_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_wall_hit:
+ 	.byte	1	/* NumTrks*/
+@@ -34,8 +35,8 @@ se_wall_hit:
+ 	.byte	se_wall_hit_pri	/* Priority*/
+ 	.byte	se_wall_hit_rev	/* Reverb.*/
+ 
+-	.int	se_wall_hit_grp
++	ptr	se_wall_hit_grp
+ 
+-	.int	se_wall_hit_1
++	ptr	se_wall_hit_1
+ 
+ 	.end
+diff --git a/sound/songs/se_win_open.s b/sound/songs/se_win_open.s
+index beef2ccc9..579554723 100644
+--- a/sound/songs/se_win_open.s
++++ b/sound/songs/se_win_open.s
+@@ -1,4 +1,5 @@
+ 	.include "MPlayDef.s"
++	.include "asm/macros/ptr.inc"
+ 
+ 	.equ	se_win_open_grp, voicegroup_rs_sfx_1
+ 	.equ	se_win_open_pri, 5
+@@ -27,7 +28,7 @@ se_win_open_1:
+ 	.byte	FINE
+ 
+ /*******************************************************@*/
+-	.align	2
++	palign
+ 
+ se_win_open:
+ 	.byte	1	/* NumTrks*/
+@@ -35,8 +36,8 @@ se_win_open:
+ 	.byte	se_win_open_pri	/* Priority*/
+ 	.byte	se_win_open_rev	/* Reverb.*/
+ 
+-	.int	se_win_open_grp
++	ptr	se_win_open_grp
+ 
+-	.int	se_win_open_1
++	ptr	se_win_open_1
+ 
+ 	.end
 diff --git a/src/battle_ai_script_commands.c b/src/battle_ai_script_commands.c
 index 6fd3cdad8..a885b49cd 100644
 --- a/src/battle_ai_script_commands.c
@@ -6404,6 +10365,71 @@ index d4fae17ea..f3e6f40e3 100644
          break;
      }
  }
+diff --git a/src/field_effect.c b/src/field_effect.c
+index 5dcc4b3c0..c79a5f392 100644
+--- a/src/field_effect.c
++++ b/src/field_effect.c
+@@ -762,6 +762,19 @@ bool8 FieldEffectCmd_loadfadedpal_callnative(u8 **script, u32 *val)
+     return TRUE;
+ }
+ 
++// Pointer-width read for field effect scripts. The stream is walked
++// sequentially, so this and the ptr_stream emission must agree on the width.
++uintptr_t FieldEffectScript_ReadPtr(u8 **script)
++{
++    uintptr_t value = 0;
++    u32 i;
++
++    for (i = 0; i < sizeof(uintptr_t); i++)
++        value |= (uintptr_t)(*script)[i] << (i * 8);
++
++    return value;
++}
++
+ u32 FieldEffectScript_ReadWord(u8 **script)
+ {
+     return (*script)[0]
+@@ -772,32 +785,32 @@ u32 FieldEffectScript_ReadWord(u8 **script)
+ 
+ void FieldEffectScript_LoadTiles(u8 **script)
+ {
+-    struct SpriteSheet *sheet = (struct SpriteSheet *)FieldEffectScript_ReadWord(script);
++    struct SpriteSheet *sheet = (struct SpriteSheet *)FieldEffectScript_ReadPtr(script);
+     if (GetSpriteTileStartByTag(sheet->tag) == 0xFFFF)
+         LoadSpriteSheet(sheet);
+-    (*script) += 4;
++    (*script) += sizeof(void *);
+ }
+ 
+ void FieldEffectScript_LoadFadedPalette(u8 **script)
+ {
+-    struct SpritePalette *palette = (struct SpritePalette *)FieldEffectScript_ReadWord(script);
++    struct SpritePalette *palette = (struct SpritePalette *)FieldEffectScript_ReadPtr(script);
+     LoadSpritePalette(palette);
+     UpdateSpritePaletteWithWeather(IndexOfSpritePaletteTag(palette->tag));
+-    (*script) += 4;
++    (*script) += sizeof(void *);
+ }
+ 
+ void FieldEffectScript_LoadPalette(u8 **script)
+ {
+-    struct SpritePalette *palette = (struct SpritePalette *)FieldEffectScript_ReadWord(script);
++    struct SpritePalette *palette = (struct SpritePalette *)FieldEffectScript_ReadPtr(script);
+     LoadSpritePalette(palette);
+-    (*script) += 4;
++    (*script) += sizeof(void *);
+ }
+ 
+ void FieldEffectScript_CallNative(u8 **script, u32 *val)
+ {
+-    u32 (*func)(void) = (u32 (*)(void))FieldEffectScript_ReadWord(script);
++    u32 (*func)(void) = (u32 (*)(void))FieldEffectScript_ReadPtr(script);
+     *val = func();
+-    (*script) += 4;
++    (*script) += sizeof(void *);
+ }
+ 
+ void FieldEffectFreeGraphicsResources(struct Sprite *sprite)
 diff --git a/src/scrcmd.c b/src/scrcmd.c
 index 39a6ec7cc..5d3487054 100644
 --- a/src/scrcmd.c
@@ -6873,7 +10899,7 @@ index 8d8ec4e4e..764b71793 100644
  
      return text.str();
 diff --git a/tools/mid2agb/agb.cpp b/tools/mid2agb/agb.cpp
-index 780f746e1..906b1d506 100644
+index 780f746e1..2a5976a15 100644
 --- a/tools/mid2agb/agb.cpp
 +++ b/tools/mid2agb/agb.cpp
 @@ -45,7 +45,8 @@ static int s_memaccParam2;
@@ -6886,7 +10912,25 @@ index 780f746e1..906b1d506 100644
      std::fprintf(g_outputFile, "\t.equ\t%s_grp, voicegroup%s\n", g_asmLabel.c_str(), g_voiceGroup.c_str());
      std::fprintf(g_outputFile, "\t.equ\t%s_pri, %u\n", g_asmLabel.c_str(), g_priority);
  
-@@ -529,19 +530,22 @@ void PrintAgbFooter()
+@@ -133,11 +134,16 @@ void PrintByte(const char *format, ...)
+     va_end(args);
+ }
+ 
++// GOTO / PATT / REPT targets inside the track bytecode. The portable MP2K
++// player already reads these at the target's pointer width (see
++// MP2K_event_goto in src/music_player.c, which memcpys sizeof(u8 *) and steps
++// by sizeof(u8 *)), so only the emission needs widening. ptr_stream never
++// aligns, which matters here: the player walks the track sequentially.
+ void PrintWord(const char *format, ...)
+ {
+     std::va_list args;
+     va_start(args, format);
+-    std::fprintf(g_outputFile, "\t .4byte\t");
++    std::fprintf(g_outputFile, "\t ptr_stream\t");
+     std::vfprintf(g_outputFile, format, args);
+     std::fprintf(g_outputFile, "\n");
+     va_end(args);
+@@ -529,19 +535,22 @@ void PrintAgbFooter()
      int trackCount = g_agbTrack - 1;
  
      //std::fprintf(g_outputFile, "\n@******************************************************@\n");
