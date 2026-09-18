@@ -98,9 +98,9 @@ and the battle script, battle anim and AI command readers.
 | battle scripts (`battle_scripts_1/2`, `battle_script_commands.c`) | 1,562 | done |
 | battle AI scripts (`battle_ai_script_commands.c`) | 1,218 | done |
 | battle anim scripts (`battle_anim.c`) | 4,231 | done |
-| contest AI scripts | 364 | blocked, see below |
-| residue in `battle_ai_scripts` | 4 | remaining |
-| **converted so far** | **47,948 / 48,316** | **99.2%** |
+| contest AI scripts | 364 | done |
+| **converted** | **48,316 / 48,316** | **100%** |
+
 
 Each step is verified three ways: the arm64 object has zero remaining ABS32,
 the arm32 object is byte-for-byte unchanged in relocation count, and the
@@ -137,7 +137,20 @@ The same cross-check validated the derivation before any of it was applied:
 142 instruction lengths computed from the macros reproduced the hardcoded
 advances exactly, with zero mismatches.
 
-## Contest AI: deliberately not converted
+## The link is all-or-nothing
+
+Reaching 99% converted did not mean nearly linkable. A single remaining
+R_AARCH64_ABS32 fails the whole shared link, so every last slot had to go --
+including contest AI, which had been set aside.
+
+With all 48,316 converted, the combined game data links:
+
+```
+aarch64-linux-gnu-ld -r    -> game_data.o, 0 ABS32
+aarch64-linux-gnu-ld -shared -> 20.5 MB .so, succeeds
+```
+
+## Contest AI: how it was eventually derived
 
 Contest AI does not follow the convention the other interpreters use. Its
 dispatcher consumes the opcode before calling the handler, so `gAIScriptPtr`
@@ -150,10 +163,15 @@ the way it is everywhere else. The cross-check refused it: with the
 instruction as the base, 88 of 100 pointer offsets failed to land on a 4-byte
 field; shifting one past the opcode still left 45 failing.
 
-Rather than apply a half-understood transformation to something that cannot
-be tested here, contest AI is left alone. It is 364 slots, 0.75% of the
-total. Converting it needs each helper's operand consumption modelled, or
-simply hand-auditing 136 commands.
+The missing piece was that each helper advances the pointer by a fixed,
+discoverable amount -- `get_condition` by 2, `get_appeal_num` by 1 -- and
+that advance *is* the base for the handler that calls it. Deriving the base
+that way took the cross-check from 12 of 100 offsets confirmed to 99 of 100.
+
+The single holdout turned out to be a pre-existing bug in the fork:
+`if_most_jamming_move` emits `.4bye` instead of `.4byte`. gas only expands a
+macro when it is used, and nothing uses this one, so the typo has never
+surfaced. It is fixed here.
 
 ## Status
 

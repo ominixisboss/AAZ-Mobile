@@ -138,10 +138,14 @@ ls sound/songs/midi/*.mid | sed 's/\.mid$/.s/' > "$WORK_DIR/.song-asm"
 echo "$(wc -l < "$WORK_DIR/.song-asm") songs"
 xargs -a "$WORK_DIR/.song-asm" make -j"$(nproc)" >/dev/null
 
-log "Assembling the APK"
+# armeabi-v7a unless asked otherwise; the ABI is passed through to Gradle,
+# which selects the toolchain and the PTR64 define in the CMakeLists.
+ABI="${POKEEMERALD_ABI:-armeabi-v7a}"
+
+log "Assembling the APK for $ABI"
 BUILD_LOG="${BUILD_LOG:-$WORK_DIR/android-build.log}"
 if ! ./android/SDL2/android-project/gradlew -p android :app:assembleDebug \
-        2>&1 | tee "$BUILD_LOG"; then
+        -PpokeemeraldAbi="$ABI" 2>&1 | tee "$BUILD_LOG"; then
     # The ninja build emits ~1000 lines of progress; surface just the
     # diagnostics so a CI failure is readable without downloading the log.
     log "BUILD FAILED -- compiler diagnostics:"

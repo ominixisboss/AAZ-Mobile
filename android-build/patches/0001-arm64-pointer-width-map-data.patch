@@ -1,16 +1,88 @@
+diff --git a/android/app/build.gradle b/android/app/build.gradle
+index 146db1978..8f443203c 100644
+--- a/android/app/build.gradle
++++ b/android/app/build.gradle
+@@ -15,7 +15,9 @@ android {
+         versionName '0.2-experimental'
+ 
+         ndk {
+-            abiFilters 'armeabi-v7a'
++            // POKEEMERALD_ABI=arm64-v8a selects the in-progress 64-bit build;
++            // the default stays armeabi-v7a, which is the one known to work.
++            abiFilters project.findProperty('pokeemeraldAbi') ?: 'armeabi-v7a'
+         }
+ 
+         externalNativeBuild {
 diff --git a/android/app/src/main/cpp/CMakeLists.txt b/android/app/src/main/cpp/CMakeLists.txt
-index 6c607dd85..3f3716a2c 100644
+index 6c607dd85..694c5813b 100644
 --- a/android/app/src/main/cpp/CMakeLists.txt
 +++ b/android/app/src/main/cpp/CMakeLists.txt
-@@ -53,7 +53,7 @@ foreach(SOURCE IN LISTS DATA_ASM SONG_ASM)
+@@ -2,15 +2,28 @@ cmake_minimum_required(VERSION 3.22)
+ project(pokeemerald_android C ASM)
+ 
+ set(ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../../..")
+-find_program(ARM_NONE_EABI_AS arm-none-eabi-as
+-    HINTS "$ENV{ARM_NONE_EABI_TOOLCHAIN}/bin"
+-    REQUIRED)
+-find_program(ARM_NONE_EABI_LD arm-none-eabi-ld
+-    HINTS "$ENV{ARM_NONE_EABI_TOOLCHAIN}/bin"
+-    REQUIRED)
+-find_program(ARM_NONE_EABI_OBJCOPY arm-none-eabi-objcopy
+-    HINTS "$ENV{ARM_NONE_EABI_TOOLCHAIN}/bin"
+-    REQUIRED)
++# The game data is assembled with a bare-metal binutils and linked into
++# libmain.so. On a 64-bit target that has to be the aarch64 assembler, and the
++# pointer macros in asm/macros/ptr.inc need PTR64 defined so they emit 8-byte
++# pointers. See android-build/ARM64-PORT.md.
++if(ANDROID_ABI STREQUAL "arm64-v8a")
++    find_program(DATA_AS aarch64-linux-gnu-as
++        HINTS "$ENV{AARCH64_TOOLCHAIN}/bin" REQUIRED)
++    find_program(DATA_LD aarch64-linux-gnu-ld
++        HINTS "$ENV{AARCH64_TOOLCHAIN}/bin" REQUIRED)
++    find_program(DATA_OBJCOPY aarch64-linux-gnu-objcopy
++        HINTS "$ENV{AARCH64_TOOLCHAIN}/bin" REQUIRED)
++    set(DATA_AS_FLAGS --defsym PTR64=1)
++else()
++    find_program(DATA_AS arm-none-eabi-as
++        HINTS "$ENV{ARM_NONE_EABI_TOOLCHAIN}/bin" REQUIRED)
++    find_program(DATA_LD arm-none-eabi-ld
++        HINTS "$ENV{ARM_NONE_EABI_TOOLCHAIN}/bin" REQUIRED)
++    find_program(DATA_OBJCOPY arm-none-eabi-objcopy
++        HINTS "$ENV{ARM_NONE_EABI_TOOLCHAIN}/bin" REQUIRED)
++    set(DATA_AS_FLAGS -march=armv7-a)
++endif()
++string(REPLACE ";" " " DATA_AS_FLAGS_STR "${DATA_AS_FLAGS}")
+ set(SDL_STATIC ON CACHE BOOL "" FORCE)
+ set(SDL_SHARED ON CACHE BOOL "" FORCE)
+ set(SDL_TEST OFF CACHE BOOL "" FORCE)
+@@ -53,14 +66,14 @@ foreach(SOURCE IN LISTS DATA_ASM SONG_ASM)
          add_custom_command(
              OUTPUT "${OUTPUT}"
              COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUTPUT_DIR}"
 -            COMMAND /bin/sh -c "sed -e 's/\\.4byte/\\.word/g;s/\\.2byte/\\.short/g' '${SOURCE}' > '${OUTPUT}.s' && '${ARM_NONE_EABI_AS}' -march=armv7-a -I'${ROOT}/sound' -o '${OUTPUT}' '${OUTPUT}.s'"
-+            COMMAND /bin/sh -c "sed -e 's/\\.4byte/\\.word/g;s/\\.2byte/\\.short/g' '${SOURCE}' > '${OUTPUT}.s' && '${ARM_NONE_EABI_AS}' -march=armv7-a -I'${ROOT}' -I'${ROOT}/sound' -o '${OUTPUT}' '${OUTPUT}.s'"
++            COMMAND /bin/sh -c "sed -e 's/\\.4byte/\\.word/g;s/\\.2byte/\\.short/g' '${SOURCE}' > '${OUTPUT}.s' && '${DATA_AS}' ${DATA_AS_FLAGS_STR} -I'${ROOT}' -I'${ROOT}/sound' -o '${OUTPUT}' '${OUTPUT}.s'"
              DEPENDS "${SOURCE}"
              VERBATIM)
      else()
+         add_custom_command(
+             OUTPUT "${OUTPUT}"
+             COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUTPUT_DIR}"
+-            COMMAND /bin/sh -c "cd '${ROOT}' && { printf \".include \\\"${SPECIAL_IDS}\\\"\\n\"; '${ROOT}/tools/preproc/preproc' '${SOURCE}' '${ROOT}/charmap.txt' | /usr/bin/cpp -I'${ROOT}/include' -DMODERN=1 -DPORTABLE -DUBFIX | '${ROOT}/tools/preproc/preproc' -ie '${SOURCE}' '${ROOT}/charmap.txt'; } > '${OUTPUT}.s' && '${ARM_NONE_EABI_AS}' -march=armv7-a -I'${ROOT}' -I'${ROOT}/sound' -o '${OUTPUT}' '${OUTPUT}.s'"
++            COMMAND /bin/sh -c "cd '${ROOT}' && { printf \".include \\\"${SPECIAL_IDS}\\\"\\n\"; '${ROOT}/tools/preproc/preproc' '${SOURCE}' '${ROOT}/charmap.txt' | /usr/bin/cpp -I'${ROOT}/include' -DMODERN=1 -DPORTABLE -DUBFIX | '${ROOT}/tools/preproc/preproc' -ie '${SOURCE}' '${ROOT}/charmap.txt'; } > '${OUTPUT}.s' && '${DATA_AS}' ${DATA_AS_FLAGS_STR} -I'${ROOT}' -I'${ROOT}/sound' -o '${OUTPUT}' '${OUTPUT}.s'"
+             DEPENDS "${SOURCE}" "${ROOT}/tools/preproc/preproc" "${ROOT}/charmap.txt" "${SPECIAL_IDS}"
+             VERBATIM)
+     endif()
+@@ -70,8 +83,8 @@ endforeach()
+ set(GAME_DATA_OBJECT "${CMAKE_BINARY_DIR}/generated/game_data.o")
+ add_custom_command(
+     OUTPUT "${GAME_DATA_OBJECT}"
+-    COMMAND "${ARM_NONE_EABI_LD}" -r -o "${GAME_DATA_OBJECT}.tmp" ${GENERATED_ASM}
+-    COMMAND "${ARM_NONE_EABI_OBJCOPY}" --rename-section .rodata=.data,alloc,load,data,contents "${GAME_DATA_OBJECT}.tmp" "${GAME_DATA_OBJECT}"
++    COMMAND "${DATA_LD}" -r -o "${GAME_DATA_OBJECT}.tmp" ${GENERATED_ASM}
++    COMMAND "${DATA_OBJCOPY}" --rename-section .rodata=.data,alloc,load,data,contents "${GAME_DATA_OBJECT}.tmp" "${GAME_DATA_OBJECT}"
+     DEPENDS ${GENERATED_ASM}
+     VERBATIM)
+ set_source_files_properties("${GAME_DATA_OBJECT}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
 diff --git a/asm/macros.inc b/asm/macros.inc
 index 95bb4e31b..ef463499f 100644
 --- a/asm/macros.inc
@@ -21,7 +93,7 @@ index 95bb4e31b..ef463499f 100644
  	.include "asm/macros/function.inc"
  	.include "asm/macros/movement.inc"
 diff --git a/asm/macros/battle_ai_script.inc b/asm/macros/battle_ai_script.inc
-index d14c7e98a..fcfc607ee 100644
+index d14c7e98a..f56d8a854 100644
 --- a/asm/macros/battle_ai_script.inc
 +++ b/asm/macros/battle_ai_script.inc
 @@ -1,25 +1,25 @@
@@ -269,7 +341,21 @@ index d14c7e98a..fcfc607ee 100644
  	.endm
  
  	.macro get_turn_count
-@@ -242,13 +242,13 @@
+@@ -230,25 +230,25 @@
+ 	.macro if_equal_ param0:req, param1:req
+ 	.byte 0x26
+ 	.byte \param0
+-	.int \param1
++	ptr_stream \param1
+ 	.endm
+ 
+ 	.macro if_not_equal_ param0:req, param1:req
+ 	.byte 0x27
+ 	.byte \param0
+-	.int \param1
++	ptr_stream \param1
+ 	.endm
+ 
  	.macro if_user_goes param0:req, param1:req
  	.byte 0x28
  	.byte \param0
@@ -1369,6 +1455,791 @@ index 00d61d15d..aeb6b548b 100644
  	.endm
  
  	.macro subattackerhpbydmg
+diff --git a/asm/macros/contest_ai_script.inc b/asm/macros/contest_ai_script.inc
+index 7ce8cd16d..86473def0 100644
+--- a/asm/macros/contest_ai_script.inc
++++ b/asm/macros/contest_ai_script.inc
+@@ -14,25 +14,25 @@
+ 	.macro if_appeal_num_less_than num:req, destination:req
+ 	.byte 0x02
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_appeal_num_more_than num:req, destination:req
+ 	.byte 0x03
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_appeal_num_eq num:req, destination:req
+ 	.byte 0x04
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_appeal_num_not_eq num:req, destination:req
+ 	.byte 0x05
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_last_appeal destination:req
+@@ -52,25 +52,25 @@
+ 	.macro if_excitement_less_than num:req, destination:req
+ 	.byte 0x07
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_excitement_more_than num:req, destination:req
+ 	.byte 0x08
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_excitement_eq num:req, destination:req
+ 	.byte 0x09
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_excitement_not_eq num:req, destination:req
+ 	.byte 0x0A
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* the order that the user goes in the current appeal*/
+@@ -82,25 +82,25 @@
+ 	.macro if_user_order_less_than num:req, destination:req
+ 	.byte 0x0C
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_user_order_more_than num:req, destination:req
+ 	.byte 0x0D
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_user_order_eq num:req, destination:req
+ 	.byte 0x0E
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_user_order_not_eq num:req, destination:req
+ 	.byte 0x0F
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* user condition*/
+@@ -112,25 +112,25 @@
+ 	.macro if_user_condition_less_than num:req, destination:req
+ 	.byte 0x11
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_user_condition_more_than num:req, destination:req
+ 	.byte 0x12
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_user_condition_eq num:req, destination:req
+ 	.byte 0x13
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_user_condition_not_eq num:req, destination:req
+ 	.byte 0x14
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* appeal points*/
+@@ -142,25 +142,25 @@
+ 	.macro if_points_less_than num:req, destination:req
+ 	.byte 0x16
+ 	.2byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_points_more_than num:req, destination:req
+ 	.byte 0x17
+ 	.2byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_points_eq num:req, destination:req
+ 	.byte 0x18
+ 	.2byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_points_not_eq num:req, destination:req
+ 	.byte 0x19
+ 	.2byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* preliminary (pre-appeal) judging points*/
+@@ -172,25 +172,25 @@
+ 	.macro if_preliminary_points_less_than num:req, destination:req
+ 	.byte 0x1B
+ 	.2byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_preliminary_points_more_than num:req, destination:req
+ 	.byte 0x1C
+ 	.2byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_preliminary_points_eq num:req, destination:req
+ 	.byte 0x1D
+ 	.2byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_preliminary_points_not_eq num:req, destination:req
+ 	.byte 0x1E
+ 	.2byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* contest type*/
+@@ -202,13 +202,13 @@
+ 	.macro if_contest_type_eq type:req, destination:req
+ 	.byte 0x20
+ 	.byte \type
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_contest_type_not_eq type:req, destination:req
+ 	.byte 0x21
+ 	.byte \type
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* move excitement (change in excitement due to move)*/
+@@ -220,25 +220,25 @@
+ 	.macro if_move_excitement_less_than num:req, destination:req
+ 	.byte 0x23
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_move_excitement_more_than num:req, destination:req
+ 	.byte 0x24
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_move_excitement_eq num:req, destination:req
+ 	.byte 0x25
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_move_excitement_not_eq num:req, destination:req
+ 	.byte 0x26
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* move effect*/
+@@ -250,13 +250,13 @@
+ 	.macro if_effect_eq effect:req, destination:req
+ 	.byte 0x28
+ 	.byte \effect
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_effect_not_eq effect:req, destination:req
+ 	.byte 0x29
+ 	.byte \effect
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* move effect type*/
+@@ -268,13 +268,13 @@
+ 	.macro if_effect_type_eq type:req, destination:req
+ 	.byte 0x2B
+ 	.byte \type
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_effect_type_not_eq type:req, destination:req
+ 	.byte 0x2C
+ 	.byte \type
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* whether the current move is the most appealing in the user's moveset*/
+@@ -285,7 +285,7 @@
+ 
+ 	.macro if_most_appealing_move destination:req
+ 	.byte 0x2E
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* whether the current move is the most jamming in the user's moveset*/
+@@ -296,7 +296,7 @@
+ 
+ 	.macro if_most_jamming_move destination:req
+ 	.byte 0x30
+-	.4bye \destination
++	.4byte \destination
+ 	.endm
+ 
+ /* number of hearts the current move's appeal would provide*/
+@@ -308,25 +308,25 @@
+ 	.macro if_num_move_hearts_less_than num:req, destination:req
+ 	.byte 0x32
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_num_move_hearts_more_than num:req, destination:req
+ 	.byte 0x33
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_num_move_hearts_eq num:req, destination:req
+ 	.byte 0x34
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_num_move_hearts_not_eq num:req, destination:req
+ 	.byte 0x35
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* number of hearts the current move's jam would remove*/
+@@ -338,25 +338,25 @@
+ 	.macro if_num_move_jam_hearts_less_than num:req, destination:req
+ 	.byte 0x37
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_num_move_jam_hearts_more_than num:req, destination:req
+ 	.byte 0x38
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_num_move_jam_hearts_eq num:req, destination:req
+ 	.byte 0x39
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_num_move_jam_hearts_not_eq num:req, destination:req
+ 	.byte 0x3A
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* number of times current move has been used*/
+@@ -368,25 +368,25 @@
+ 	.macro if_move_used_count_less_than num:req, destination:req
+ 	.byte 0x3C
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_move_used_count_more_than num:req, destination:req
+ 	.byte 0x3D
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_move_used_count_eq num:req, destination:req
+ 	.byte 0x3E
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_move_used_count_not_eq num:req, destination:req
+ 	.byte 0x3F
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* whether the current move is a combo starter (with another move in the moveset)*/
+@@ -397,12 +397,12 @@
+ 
+ 	.macro if_combo_starter destination:req
+ 	.byte 0x41
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_not_combo_starter destination:req
+ 	.byte 0x42
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* whether the current move is a combo finisher (with another move in the moveset)*/
+@@ -413,12 +413,12 @@
+ 
+ 	.macro if_combo_finisher destination:req
+ 	.byte 0x44
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_not_combo_finisher destination:req
+ 	.byte 0x45
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* whether the current move would finish a combo*/
+@@ -429,12 +429,12 @@
+ 
+ 	.macro if_would_finish_combo destination:req
+ 	.byte 0x47
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_would_not_finish_combo destination:req
+ 	.byte 0x48
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* condition of mon (indexed by order)*/
+@@ -448,28 +448,28 @@
+ 	.byte 0x4A
+ 	.byte \mon
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_condition_more_than mon:req, num:req, destination:req
+ 	.byte 0x4B
+ 	.byte \mon
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_condition_eq mon:req, num:req, destination:req
+ 	.byte 0x4C
+ 	.byte \mon
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_condition_not_eq mon:req, num:req, destination:req
+ 	.byte 0x4D
+ 	.byte \mon
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* whether the mon used a combo starter move*/
+@@ -485,14 +485,14 @@
+ 	.byte 0x4F
+ 	.byte \mon
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_combo_starter_more_than mon:req, num:req, destination:req
+ 	.byte 0x50
+ 	.byte \mon
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 
+@@ -500,14 +500,14 @@
+ 	.byte 0x51
+ 	.byte \mon
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_combo_starter_not_eq mon:req, num:req, destination:req
+ 	.byte 0x52
+ 	.byte \mon
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_combo_starter mon:req, destination:req
+@@ -528,13 +528,13 @@
+ 	.macro if_can_participate mon:req, destination:req
+ 	.byte 0x54
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_cannot_participate mon:req, destination:req
+ 	.byte 0x55
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* whether the mon just completed a combo*/
+@@ -548,13 +548,13 @@
+ 	.macro if_completed_combo mon:req, destination:req
+ 	.byte 0x57
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_not_completed_combo mon:req destination:req
+ 	.byte 0x58
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* comparing appeal points to another mon*/
+@@ -567,25 +567,25 @@
+ 	.macro if_points_more_than_mon mon:req, destination:req
+ 	.byte 0x5A
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_points_less_than_mon mon:req, destination:req
+ 	.byte 0x5B
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_points_eq_mon mon:req, destination:req
+ 	.byte 0x5C
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_points_not_eq_mon mon:req, destination:req
+ 	.byte 0x5D
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* comparing preliminary judging points to another mon*/
+@@ -598,25 +598,25 @@
+ 	.macro if_preliminary_points_more_than_mon mon:req, destination:req
+ 	.byte 0x5F
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_preliminary_points_less_than_mon mon:req, destination:req
+ 	.byte 0x60
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_preliminary_points_eq_mon mon:req, destination:req
+ 	.byte 0x61
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_preliminary_points_not_eq_mon mon:req, destination:req
+ 	.byte 0x62
+ 	.byte \mon
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* checking move history for move effect*/
+@@ -632,7 +632,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \effect
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_moves_effect_more_than mon:req, round:req, effect:req, destination:req
+@@ -640,7 +640,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \effect
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_moves_effect_eq mon:req, round:req, effect:req, destination:req
+@@ -648,7 +648,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \effect
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_moves_effect_not_eq mon:req, round:req, effect:req, destination:req
+@@ -656,7 +656,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \effect
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* checking move history for excitement*/
+@@ -672,7 +672,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_moves_excitement_more_than mon:req, round:req, num:req, destination:req
+@@ -680,7 +680,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_moves_excitement_eq mon:req, round:req, num:req, destination:req
+@@ -688,7 +688,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_moves_excitement_not_eq mon:req, round:req, num:req, destination:req
+@@ -696,7 +696,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* checking move history for effect type*/
+@@ -712,7 +712,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \type
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_used_moves_effect_type_not_eq mon:req, round:req, type:req, destination:req
+@@ -720,7 +720,7 @@
+ 	.byte \mon
+ 	.byte \round
+ 	.byte \type
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ /* generic commands*/
+@@ -759,79 +759,79 @@
+ 	.byte 0x75
+ 	.byte \varId
+ 	.short \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_greater_than varId:req, num:req, destination:req
+ 	.byte 0x76
+ 	.byte \varId
+ 	.short \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_eq varId:req, num:req, destination:req
+ 	.byte 0x77
+ 	.byte \varId
+ 	.short \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_not_eq varId:req, num:req, destination:req
+ 	.byte 0x78
+ 	.byte \varId
+ 	.short \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_less_than_var varId1:req, varId2:req, destination:req
+ 	.byte 0x79
+ 	.byte \varId1
+ 	.byte \varId2
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_greater_than_var varId1:req, varId2:req, destination:req
+ 	.byte 0x7A
+ 	.byte \varId1
+ 	.byte \varId2
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_eq_var varId1:req, varId2:req, destination:req
+ 	.byte 0x7B
+ 	.byte \varId1
+ 	.byte \varId2
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_not_eq_var varId1:req, varId2:req, destination:req
+ 	.byte 0x7C
+ 	.byte \varId1
+ 	.byte \varId2
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	/* NOTE: The random commands are broken (see ContestAICmd_if_random_less_than)*/
+ 	.macro if_random_less_than num:req, destination:req
+ 	.byte 0x7D
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_random_greater_than num:req, destination:req
+ 	.byte 0x7E
+ 	.byte \num
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro goto destination:req
+ 	.byte 0x7F
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro call destination:req
+ 	.byte 0x80
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro end
+@@ -844,12 +844,12 @@
+ 
+ 	.macro if_user_has_exciting_move destination:req
+ 	.byte 0x83
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_user_doesnt_have_exciting_move destination:req
+ 	.byte 0x84
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	/* This is used incorrectly to check for an effect; see ContestAICmd_check_user_has_move*/
+@@ -861,11 +861,11 @@
+ 	.macro if_user_has_move move:req, destination:req
+ 	.byte 0x86
+ 	.short \move
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
+ 
+ 	.macro if_user_doesnt_have_move move:req, destination:req
+ 	.byte 0x87
+ 	.short \move
+-	.int \destination
++	ptr_stream \destination
+ 	.endm
 diff --git a/asm/macros/event.inc b/asm/macros/event.inc
 index 3d6441687..bb4cf5c23 100644
 --- a/asm/macros/event.inc
@@ -3437,6 +4308,84 @@ index 12aede444..02d79d33b 100644
  
  BattleScript_BallThrow::
  	jumpifword CMP_COMMON_BITS, gBattleTypeFlags, BATTLE_TYPE_WALLY_TUTORIAL, BattleScript_BallThrowByWally
+diff --git a/data/contest_ai_scripts.s b/data/contest_ai_scripts.s
+index 0b8b739ba..ac73d19d2 100644
+--- a/data/contest_ai_scripts.s
++++ b/data/contest_ai_scripts.s
+@@ -13,40 +13,40 @@
+ 	enum MON_3
+ 	enum MON_4
+ 
+-	.align 2
++	palign
+ gContestAI_ScriptsTable::
+-	.int AI_CheckBadMove      /* CONTEST_AI_CHECK_BAD_MOVE*/
+-	.int AI_CheckCombo        /* CONTEST_AI_CHECK_COMBO*/
+-	.int AI_CheckBoring       /* CONTEST_AI_CHECK_BORING*/
+-	.int AI_CheckExcitement   /* CONTEST_AI_CHECK_EXCITEMENT*/
+-	.int AI_CheckOrder        /* CONTEST_AI_CHECK_ORDER*/
+-	.int AI_CheckGoodMove     /* CONTEST_AI_CHECK_GOOD_MOVE*/
+-	.int AI_Erratic           /* CONTEST_AI_ERRATIC*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_1*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_2*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_3*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_4*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_5*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_6*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_7*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_8*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_9*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_10*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_11*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_12*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_13*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_14*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_15*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_16*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_17*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_18*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_19*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_20*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_21*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_22*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_23*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_24*/
+-	.int AI_Nothing           /* CONTEST_AI_DUMMY_25*/
++	ptr AI_CheckBadMove      /* CONTEST_AI_CHECK_BAD_MOVE*/
++	ptr AI_CheckCombo        /* CONTEST_AI_CHECK_COMBO*/
++	ptr AI_CheckBoring       /* CONTEST_AI_CHECK_BORING*/
++	ptr AI_CheckExcitement   /* CONTEST_AI_CHECK_EXCITEMENT*/
++	ptr AI_CheckOrder        /* CONTEST_AI_CHECK_ORDER*/
++	ptr AI_CheckGoodMove     /* CONTEST_AI_CHECK_GOOD_MOVE*/
++	ptr AI_Erratic           /* CONTEST_AI_ERRATIC*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_1*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_2*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_3*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_4*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_5*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_6*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_7*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_8*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_9*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_10*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_11*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_12*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_13*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_14*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_15*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_16*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_17*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_18*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_19*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_20*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_21*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_22*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_23*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_24*/
++	ptr AI_Nothing           /* CONTEST_AI_DUMMY_25*/
+ 
+ 
+ /* Unused. Encourages improving condition on the 1st appeal, or startling mons if the users turn is later*/
 diff --git a/data/event_scripts.s b/data/event_scripts.s
 index ba6f55c6d..f9f87150a 100644
 --- a/data/event_scripts.s
@@ -7513,7 +8462,7 @@ index beef2ccc9..579554723 100644
  
  	.end
 diff --git a/src/battle_ai_script_commands.c b/src/battle_ai_script_commands.c
-index 6fd3cdad8..a885b49cd 100644
+index 6fd3cdad8..456ab3f06 100644
 --- a/src/battle_ai_script_commands.c
 +++ b/src/battle_ai_script_commands.c
 @@ -665,9 +665,9 @@ static void Cmd_if_random_less_than(void)
@@ -7924,25 +8873,27 @@ index 6fd3cdad8..a885b49cd 100644
  }
  
  static void Cmd_get_turn_count(void)
-@@ -1252,7 +1252,7 @@ static void Cmd_get_last_used_battler_move(void)
+@@ -1252,33 +1252,33 @@ static void Cmd_get_last_used_battler_move(void)
  static void Cmd_if_equal_(void) // Same as if_equal.
  {
      if (gAIScriptPtr[1] == AI_THINKING_STRUCT->funcResult)
 -        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
 +        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
      else
-         gAIScriptPtr += 6;
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
  }
-@@ -1260,7 +1260,7 @@ static void Cmd_if_equal_(void) // Same as if_equal.
+ 
  static void Cmd_if_not_equal_(void) // Same as if_not_equal.
  {
      if (gAIScriptPtr[1] != AI_THINKING_STRUCT->funcResult)
 -        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
 +        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
      else
-         gAIScriptPtr += 6;
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
  }
-@@ -1268,17 +1268,17 @@ static void Cmd_if_not_equal_(void) // Same as if_not_equal.
+ 
  static void Cmd_if_user_goes(void)
  {
      if (GetWhoStrikesFirst(sBattler_AI, gBattlerTarget, TRUE) == gAIScriptPtr[1])
@@ -8306,11 +9257,13 @@ index 6fd3cdad8..a885b49cd 100644
  }
  
  static void Cmd_get_gender(void)
-@@ -2189,12 +2189,12 @@ static void Cmd_nop_57(void)
+@@ -2188,13 +2188,13 @@ static void Cmd_nop_57(void)
+ 
  static void Cmd_call(void)
  {
-     AIStackPushVar(gAIScriptPtr + 5);
+-    AIStackPushVar(gAIScriptPtr + 5);
 -    gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++    AIStackPushVar(gAIScriptPtr + 1 + sizeof(void *));
 +    gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
  }
  
@@ -10364,6 +11317,1180 @@ index d4fae17ea..f3e6f40e3 100644
 +            gBattlescriptCurrInstr = ReadStreamPtr(gBattlescriptCurrInstr + 1);
          break;
      }
+ }
+diff --git a/src/contest_ai.c b/src/contest_ai.c
+index 443e57f8b..3c8839713 100644
+--- a/src/contest_ai.c
++++ b/src/contest_ai.c
+@@ -417,9 +417,9 @@ static void ContestAICmd_if_appeal_num_less_than(void)
+     ContestAICmd_get_appeal_num();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_appeal_num_more_than(void)
+@@ -427,9 +427,9 @@ static void ContestAICmd_if_appeal_num_more_than(void)
+     ContestAICmd_get_appeal_num();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_appeal_num_eq(void)
+@@ -437,9 +437,9 @@ static void ContestAICmd_if_appeal_num_eq(void)
+     ContestAICmd_get_appeal_num();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_appeal_num_not_eq(void)
+@@ -447,9 +447,9 @@ static void ContestAICmd_if_appeal_num_not_eq(void)
+     ContestAICmd_get_appeal_num();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_excitement(void)
+@@ -463,9 +463,9 @@ static void ContestAICmd_if_excitement_less_than(void)
+     ContestAICmd_get_excitement();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_excitement_more_than(void)
+@@ -473,9 +473,9 @@ static void ContestAICmd_if_excitement_more_than(void)
+     ContestAICmd_get_excitement();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_excitement_eq(void)
+@@ -483,9 +483,9 @@ static void ContestAICmd_if_excitement_eq(void)
+     ContestAICmd_get_excitement();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_excitement_not_eq(void)
+@@ -493,9 +493,9 @@ static void ContestAICmd_if_excitement_not_eq(void)
+     ContestAICmd_get_excitement();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_user_order(void)
+@@ -509,9 +509,9 @@ static void ContestAICmd_if_user_order_less_than(void)
+     ContestAICmd_get_user_order();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_user_order_more_than(void)
+@@ -519,9 +519,9 @@ static void ContestAICmd_if_user_order_more_than(void)
+     ContestAICmd_get_user_order();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_user_order_eq(void)
+@@ -529,9 +529,9 @@ static void ContestAICmd_if_user_order_eq(void)
+     ContestAICmd_get_user_order();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_user_order_not_eq(void)
+@@ -539,9 +539,9 @@ static void ContestAICmd_if_user_order_not_eq(void)
+     ContestAICmd_get_user_order();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_user_condition(void)
+@@ -555,9 +555,9 @@ static void ContestAICmd_if_user_condition_less_than(void)
+     ContestAICmd_get_user_condition();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_user_condition_more_than(void)
+@@ -565,9 +565,9 @@ static void ContestAICmd_if_user_condition_more_than(void)
+     ContestAICmd_get_user_condition();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_user_condition_eq(void)
+@@ -575,9 +575,9 @@ static void ContestAICmd_if_user_condition_eq(void)
+     ContestAICmd_get_user_condition();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_user_condition_not_eq(void)
+@@ -585,9 +585,9 @@ static void ContestAICmd_if_user_condition_not_eq(void)
+     ContestAICmd_get_user_condition();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_points(void)
+@@ -601,9 +601,9 @@ static void ContestAICmd_if_points_less_than(void)
+     ContestAICmd_get_points();
+ 
+     if (eContestAI.scriptResult < (s16)T1_READ_16(gAIScriptPtr + 0))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_points_more_than(void)
+@@ -611,9 +611,9 @@ static void ContestAICmd_if_points_more_than(void)
+     ContestAICmd_get_points();
+ 
+     if (eContestAI.scriptResult > (s16)T1_READ_16(gAIScriptPtr + 0))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_points_eq(void)
+@@ -621,9 +621,9 @@ static void ContestAICmd_if_points_eq(void)
+     ContestAICmd_get_points();
+ 
+     if (eContestAI.scriptResult == (s16)T1_READ_16(gAIScriptPtr + 0))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_points_not_eq(void)
+@@ -631,9 +631,9 @@ static void ContestAICmd_if_points_not_eq(void)
+     ContestAICmd_get_points();
+ 
+     if (eContestAI.scriptResult != (s16)T1_READ_16(gAIScriptPtr + 0))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_preliminary_points(void)
+@@ -647,9 +647,9 @@ static void ContestAICmd_if_preliminary_points_less_than(void)
+     ContestAICmd_get_preliminary_points();
+ 
+     if (eContestAI.scriptResult < (s16)T1_READ_16(gAIScriptPtr + 0))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_preliminary_points_more_than(void)
+@@ -657,9 +657,9 @@ static void ContestAICmd_if_preliminary_points_more_than(void)
+     ContestAICmd_get_preliminary_points();
+ 
+     if (eContestAI.scriptResult > (s16)T1_READ_16(gAIScriptPtr + 0))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_preliminary_points_eq(void)
+@@ -667,9 +667,9 @@ static void ContestAICmd_if_preliminary_points_eq(void)
+     ContestAICmd_get_preliminary_points();
+ 
+     if (eContestAI.scriptResult == (s16)T1_READ_16(gAIScriptPtr + 0))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_preliminary_points_not_eq(void)
+@@ -677,9 +677,9 @@ static void ContestAICmd_if_preliminary_points_not_eq(void)
+     ContestAICmd_get_preliminary_points();
+ 
+     if (eContestAI.scriptResult != (s16)T1_READ_16(gAIScriptPtr + 0))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_contest_type(void)
+@@ -693,9 +693,9 @@ static void ContestAICmd_if_contest_type_eq(void)
+     ContestAICmd_get_contest_type();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_contest_type_not_eq(void)
+@@ -703,9 +703,9 @@ static void ContestAICmd_if_contest_type_not_eq(void)
+     ContestAICmd_get_contest_type();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_move_excitement(void)
+@@ -719,9 +719,9 @@ static void ContestAICmd_if_move_excitement_less_than(void)
+     ContestAICmd_get_move_excitement();
+ 
+     if (eContestAI.scriptResult < (s8)gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_move_excitement_more_than(void)
+@@ -729,9 +729,9 @@ static void ContestAICmd_if_move_excitement_more_than(void)
+     ContestAICmd_get_move_excitement();
+ 
+     if (eContestAI.scriptResult > (s8)gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_move_excitement_eq(void)
+@@ -739,9 +739,9 @@ static void ContestAICmd_if_move_excitement_eq(void)
+     ContestAICmd_get_move_excitement();
+ 
+     if (eContestAI.scriptResult == (s8)gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_move_excitement_not_eq(void)
+@@ -749,9 +749,9 @@ static void ContestAICmd_if_move_excitement_not_eq(void)
+     ContestAICmd_get_move_excitement();
+ 
+     if (eContestAI.scriptResult != (s8)gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_move_effect(void)
+@@ -767,9 +767,9 @@ static void ContestAICmd_if_move_effect_eq(void)
+     ContestAICmd_get_move_effect();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_move_effect_not_eq(void)
+@@ -777,9 +777,9 @@ static void ContestAICmd_if_move_effect_not_eq(void)
+     ContestAICmd_get_move_effect();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_move_effect_type(void)
+@@ -795,9 +795,9 @@ static void ContestAICmd_if_move_effect_type_eq(void)
+     ContestAICmd_get_move_effect_type();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_move_effect_type_not_eq(void)
+@@ -805,9 +805,9 @@ static void ContestAICmd_if_move_effect_type_not_eq(void)
+     ContestAICmd_get_move_effect_type();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_check_most_appealing_move(void)
+@@ -836,9 +836,9 @@ static void ContestAICmd_if_most_appealing_move(void)
+     ContestAICmd_check_most_appealing_move();
+ 
+     if (eContestAI.scriptResult != FALSE)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_check_most_jamming_move(void)
+@@ -867,7 +867,7 @@ static void ContestAICmd_if_most_jamming_move(void)
+     ContestAICmd_check_most_jamming_move();
+ 
+     if (eContestAI.scriptResult != FALSE)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+         gAIScriptPtr += 5;
+ }
+@@ -885,9 +885,9 @@ static void ContestAICmd_if_num_move_hearts_less_than(void)
+     ContestAICmd_get_num_move_hearts();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_num_move_hearts_more_than(void)
+@@ -895,9 +895,9 @@ static void ContestAICmd_if_num_move_hearts_more_than(void)
+     ContestAICmd_get_num_move_hearts();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_num_move_hearts_eq(void)
+@@ -905,9 +905,9 @@ static void ContestAICmd_if_num_move_hearts_eq(void)
+     ContestAICmd_get_num_move_hearts();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_num_move_hearts_not_eq(void)
+@@ -915,9 +915,9 @@ static void ContestAICmd_if_num_move_hearts_not_eq(void)
+     ContestAICmd_get_num_move_hearts();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_num_move_jam_hearts(void)
+@@ -933,9 +933,9 @@ static void ContestAICmd_if_num_move_jam_hearts_less_than(void)
+     ContestAICmd_get_num_move_jam_hearts();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_num_move_jam_hearts_more_than(void)
+@@ -943,9 +943,9 @@ static void ContestAICmd_if_num_move_jam_hearts_more_than(void)
+     ContestAICmd_get_num_move_jam_hearts();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_num_move_jam_hearts_eq(void)
+@@ -953,9 +953,9 @@ static void ContestAICmd_if_num_move_jam_hearts_eq(void)
+     ContestAICmd_get_num_move_jam_hearts();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_num_move_jam_hearts_not_eq(void)
+@@ -963,9 +963,9 @@ static void ContestAICmd_if_num_move_jam_hearts_not_eq(void)
+     ContestAICmd_get_num_move_jam_hearts();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_move_used_count(void)
+@@ -987,9 +987,9 @@ static void ContestAICmd_if_most_used_count_less_than(void)
+     ContestAICmd_get_move_used_count();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_most_used_count_more_than(void)
+@@ -997,9 +997,9 @@ static void ContestAICmd_if_most_used_count_more_than(void)
+     ContestAICmd_get_move_used_count();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_most_used_count_eq(void)
+@@ -1007,9 +1007,9 @@ static void ContestAICmd_if_most_used_count_eq(void)
+     ContestAICmd_get_move_used_count();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_most_used_count_not_eq(void)
+@@ -1017,9 +1017,9 @@ static void ContestAICmd_if_most_used_count_not_eq(void)
+     ContestAICmd_get_move_used_count();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_check_combo_starter(void)
+@@ -1053,9 +1053,9 @@ static void ContestAICmd_if_combo_starter(void)
+     ContestAICmd_check_combo_starter();
+ 
+     if (eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_not_combo_starter(void)
+@@ -1063,9 +1063,9 @@ static void ContestAICmd_if_not_combo_starter(void)
+     ContestAICmd_check_combo_starter();
+ 
+     if (!eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_check_combo_finisher(void)
+@@ -1099,9 +1099,9 @@ static void ContestAICmd_if_combo_finisher(void)
+     ContestAICmd_check_combo_finisher();
+ 
+     if (eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_not_combo_finisher(void)
+@@ -1109,9 +1109,9 @@ static void ContestAICmd_if_not_combo_finisher(void)
+     ContestAICmd_check_combo_finisher();
+ 
+     if (!eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_check_would_finish_combo(void)
+@@ -1134,9 +1134,9 @@ static void ContestAICmd_if_would_finish_combo(void)
+     ContestAICmd_check_would_finish_combo();
+ 
+     if (eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_would_not_finish_combo(void)
+@@ -1144,9 +1144,9 @@ static void ContestAICmd_if_would_not_finish_combo(void)
+     ContestAICmd_check_would_finish_combo();
+ 
+     if (!eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_condition(void)
+@@ -1162,9 +1162,9 @@ static void ContestAICmd_if_condition_less_than(void)
+     ContestAICmd_get_condition();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_condition_more_than(void)
+@@ -1172,9 +1172,9 @@ static void ContestAICmd_if_condition_more_than(void)
+     ContestAICmd_get_condition();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_condition_eq(void)
+@@ -1182,9 +1182,9 @@ static void ContestAICmd_if_condition_eq(void)
+     ContestAICmd_get_condition();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_condition_not_eq(void)
+@@ -1192,9 +1192,9 @@ static void ContestAICmd_if_condition_not_eq(void)
+     ContestAICmd_get_condition();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_used_combo_starter(void)
+@@ -1214,9 +1214,9 @@ static void ContestAICmd_if_used_combo_starter_less_than(void)
+     ContestAICmd_get_used_combo_starter();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_combo_starter_more_than(void)
+@@ -1224,9 +1224,9 @@ static void ContestAICmd_if_used_combo_starter_more_than(void)
+     ContestAICmd_get_used_combo_starter();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_combo_starter_eq(void)
+@@ -1234,9 +1234,9 @@ static void ContestAICmd_if_used_combo_starter_eq(void)
+     ContestAICmd_get_used_combo_starter();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_combo_starter_not_eq(void)
+@@ -1244,9 +1244,9 @@ static void ContestAICmd_if_used_combo_starter_not_eq(void)
+     ContestAICmd_get_used_combo_starter();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_check_can_participate(void)
+@@ -1264,9 +1264,9 @@ static void ContestAICmd_if_can_participate(void)
+     ContestAICmd_check_can_participate();
+ 
+     if (eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_cannot_participate(void)
+@@ -1274,9 +1274,9 @@ static void ContestAICmd_if_cannot_participate(void)
+     ContestAICmd_check_can_participate();
+ 
+     if (!eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_completed_combo(void)
+@@ -1292,9 +1292,9 @@ static void ContestAICmd_if_completed_combo(void)
+     ContestAICmd_get_completed_combo();
+ 
+     if (eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_not_completed_combo(void)
+@@ -1302,9 +1302,9 @@ static void ContestAICmd_if_not_completed_combo(void)
+     ContestAICmd_get_completed_combo();
+ 
+     if (!eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_points_diff(void)
+@@ -1320,9 +1320,9 @@ static void ContestAICmd_if_points_more_than_mon(void)
+     ContestAICmd_get_points_diff();
+ 
+     if (eContestAI.scriptResult < 0)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_points_less_than_mon(void)
+@@ -1330,9 +1330,9 @@ static void ContestAICmd_if_points_less_than_mon(void)
+     ContestAICmd_get_points_diff();
+ 
+     if (eContestAI.scriptResult > 0)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_points_eq_mon(void)
+@@ -1340,9 +1340,9 @@ static void ContestAICmd_if_points_eq_mon(void)
+     ContestAICmd_get_points_diff();
+ 
+     if (eContestAI.scriptResult == 0)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_points_not_eq_mon(void)
+@@ -1350,9 +1350,9 @@ static void ContestAICmd_if_points_not_eq_mon(void)
+     ContestAICmd_get_points_diff();
+ 
+     if (eContestAI.scriptResult != 0)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_preliminary_points_diff(void)
+@@ -1368,9 +1368,9 @@ static void ContestAICmd_if_preliminary_points_more_than_mon(void)
+     ContestAICmd_get_preliminary_points_diff();
+ 
+     if (eContestAI.scriptResult < 0)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_preliminary_points_less_than_mon(void)
+@@ -1378,9 +1378,9 @@ static void ContestAICmd_if_preliminary_points_less_than_mon(void)
+     ContestAICmd_get_preliminary_points_diff();
+ 
+     if (eContestAI.scriptResult > 0)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_preliminary_points_eq_mon(void)
+@@ -1388,9 +1388,9 @@ static void ContestAICmd_if_preliminary_points_eq_mon(void)
+     ContestAICmd_get_preliminary_points_diff();
+ 
+     if (eContestAI.scriptResult == 0)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_preliminary_points_not_eq_mon(void)
+@@ -1398,9 +1398,9 @@ static void ContestAICmd_if_preliminary_points_not_eq_mon(void)
+     ContestAICmd_get_preliminary_points_diff();
+ 
+     if (eContestAI.scriptResult != 0)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_used_moves_effect(void)
+@@ -1418,9 +1418,9 @@ static void ContestAICmd_if_used_moves_effect_less_than(void)
+     ContestAICmd_get_used_moves_effect();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_moves_effect_more_than(void)
+@@ -1428,9 +1428,9 @@ static void ContestAICmd_if_used_moves_effect_more_than(void)
+     ContestAICmd_get_used_moves_effect();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_moves_effect_eq(void)
+@@ -1438,9 +1438,9 @@ static void ContestAICmd_if_used_moves_effect_eq(void)
+     ContestAICmd_get_used_moves_effect();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_moves_effect_not_eq(void)
+@@ -1448,9 +1448,9 @@ static void ContestAICmd_if_used_moves_effect_not_eq(void)
+     ContestAICmd_get_used_moves_effect();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_used_moves_excitement(void)
+@@ -1468,9 +1468,9 @@ static void ContestAICmd_if_used_moves_excitement_less_than(void)
+     ContestAICmd_get_used_moves_excitement();
+ 
+     if (eContestAI.scriptResult < gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_moves_excitement_more_than(void)
+@@ -1478,9 +1478,9 @@ static void ContestAICmd_if_used_moves_excitement_more_than(void)
+     ContestAICmd_get_used_moves_excitement();
+ 
+     if (eContestAI.scriptResult > gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_moves_excitement_eq(void)
+@@ -1488,9 +1488,9 @@ static void ContestAICmd_if_used_moves_excitement_eq(void)
+     ContestAICmd_get_used_moves_excitement();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_moves_excitement_not_eq(void)
+@@ -1498,9 +1498,9 @@ static void ContestAICmd_if_used_moves_excitement_not_eq(void)
+     ContestAICmd_get_used_moves_excitement();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_get_used_moves_effect_type(void)
+@@ -1518,9 +1518,9 @@ static void ContestAICmd_if_used_moves_effect_type_eq(void)
+     ContestAICmd_get_used_moves_effect_type();
+ 
+     if (eContestAI.scriptResult == gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_used_moves_effect_type_not_eq(void)
+@@ -1528,9 +1528,9 @@ static void ContestAICmd_if_used_moves_effect_type_not_eq(void)
+     ContestAICmd_get_used_moves_effect_type();
+ 
+     if (eContestAI.scriptResult != gAIScriptPtr[0])
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+     else
+-        gAIScriptPtr += 5;
++        gAIScriptPtr += 1 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_save_result(void)
+@@ -1567,65 +1567,65 @@ static void ContestAICmd_addvar_duplicate(void)
+ static void ContestAICmd_if_less_than(void)
+ {
+     if (eContestAI.vars[gAIScriptPtr[1]] < T1_READ_16(gAIScriptPtr + 2))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 4);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 4);
+     else
+-        gAIScriptPtr += 8;
++        gAIScriptPtr += 4 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_greater_than(void)
+ {
+     if (eContestAI.vars[gAIScriptPtr[1]] > T1_READ_16(gAIScriptPtr + 2))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 4);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 4);
+     else
+-        gAIScriptPtr += 8;
++        gAIScriptPtr += 4 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_eq(void)
+ {
+     if (eContestAI.vars[gAIScriptPtr[1]] == T1_READ_16(gAIScriptPtr + 2))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 4);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 4);
+     else
+-        gAIScriptPtr += 8;
++        gAIScriptPtr += 4 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_not_eq(void)
+ {
+     if (eContestAI.vars[gAIScriptPtr[1]] != T1_READ_16(gAIScriptPtr + 2))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 4);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 4);
+     else
+-        gAIScriptPtr += 8;
++        gAIScriptPtr += 4 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_less_than_var(void)
+ {
+     if (eContestAI.vars[gAIScriptPtr[1]] < (eContestAI.vars[gAIScriptPtr[2]]))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 3);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 3);
+     else
+-        gAIScriptPtr += 7;
++        gAIScriptPtr += 3 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_greater_than_var(void)
+ {
+     if (eContestAI.vars[gAIScriptPtr[1]] > (eContestAI.vars[gAIScriptPtr[2]]))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 3);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 3);
+     else
+-        gAIScriptPtr += 7;
++        gAIScriptPtr += 3 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_eq_var(void)
+ {
+     if (eContestAI.vars[gAIScriptPtr[1]] == (eContestAI.vars[gAIScriptPtr[2]]))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 3);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 3);
+     else
+-        gAIScriptPtr += 7;
++        gAIScriptPtr += 3 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_not_eq_var(void)
+ {
+     if (eContestAI.vars[gAIScriptPtr[1]] != (eContestAI.vars[gAIScriptPtr[2]]))
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 3);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 3);
+     else
+-        gAIScriptPtr += 7;
++        gAIScriptPtr += 3 + sizeof(void *);
+ }
+ 
+ // UB: Should just be comparing to gAIScriptPtr[1] in the functions below
+@@ -1638,9 +1638,9 @@ static void ContestAICmd_if_random_less_than(void)
+ #else
+     if ((Random() & 0xFF) < gAIScriptPtr[1])
+ #endif
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_random_greater_than(void)
+@@ -1650,20 +1650,20 @@ static void ContestAICmd_if_random_greater_than(void)
+ #else
+     if (((Random()) & 0xFF) > gAIScriptPtr[1])
+ #endif
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 2);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 2);
+     else
+-        gAIScriptPtr += 6;
++        gAIScriptPtr += 2 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_goto(void)
+ {
+-    gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++    gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+ }
+ 
+ static void ContestAICmd_call(void)
+ {
+     AIStackPushVar(gAIScriptPtr + 5);
+-    gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 1);
++    gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 1);
+ }
+ 
+ static void ContestAICmd_end(void)
+@@ -1717,9 +1717,9 @@ static void ContestAICmd_if_user_has_exciting_move(void)
+     ContestAICmd_check_user_has_exciting_move();
+ 
+     if (eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_user_doesnt_have_exciting_move(void)
+@@ -1727,9 +1727,9 @@ static void ContestAICmd_if_user_doesnt_have_exciting_move(void)
+     ContestAICmd_check_user_has_exciting_move();
+ 
+     if (!eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ // BUG: This is checking if the user has a specific move, but when it's used in the AI script
+@@ -1769,9 +1769,9 @@ static void ContestAICmd_if_user_has_move(void)
+     ContestAICmd_check_user_has_move();
+ 
+     if (eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
+ }
+ 
+ static void ContestAICmd_if_user_doesnt_have_move(void)
+@@ -1779,7 +1779,7 @@ static void ContestAICmd_if_user_doesnt_have_move(void)
+     ContestAICmd_check_user_has_move();
+ 
+     if (!eContestAI.scriptResult)
+-        gAIScriptPtr = T1_READ_PTR(gAIScriptPtr + 0);
++        gAIScriptPtr = ReadStreamPtr(gAIScriptPtr + 0);
+     else
+-        gAIScriptPtr += 4;
++        gAIScriptPtr += 0 + sizeof(void *);
  }
 diff --git a/src/field_effect.c b/src/field_effect.c
 index 5dcc4b3c0..c79a5f392 100644
