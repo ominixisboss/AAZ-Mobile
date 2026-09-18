@@ -226,3 +226,20 @@ regardless of this change, since `SaveBlock1` serializes pointer-bearing
 structs either way.
 
 `SaveBlock2` and `PokemonStorage` contain no pointers and are unchanged.
+
+### VRAM macro truncated addresses (fixed)
+
+    src/tileset_anims.c:220: error: initializer element is not a compile-time
+    constant
+
+`include/gba/defines.h` defined the portable build's VRAM base as
+`#define VRAM (u32)VRAM_`, where `VRAM_` is the emulated VRAM array. Static
+initializers of the form `(u16 *)(BG_VRAM + TILE_OFFSET_4BPP(n))` are only
+compile-time constants while the expression stays an *address constant*.
+Truncating a 64-bit address to `u32` is an arithmetic conversion the compiler
+cannot fold, so every such initializer fails on arm64. On arm32 the cast was a
+no-op, which is why it went unnoticed.
+
+Changed to `((__UINTPTR_TYPE__)VRAM_)` -- a compiler builtin, so the header does
+not need `stdint.h`. `PLTT` and `OAM` are plain arrays with no cast and were
+already fine; `VRAM` was the only macro of this shape.

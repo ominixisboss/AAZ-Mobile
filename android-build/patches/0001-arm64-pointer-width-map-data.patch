@@ -4706,6 +4706,27 @@ index b8e3afd3d..0c7398038 100644
  	.endm
  
  .set __special__, 0
+diff --git a/include/gba/defines.h b/include/gba/defines.h
+index edd27b6b7..46629408c 100755
+--- a/include/gba/defines.h
++++ b/include/gba/defines.h
+@@ -56,7 +56,15 @@ extern unsigned char PLTT[PLTT_SIZE] __attribute__ ((aligned (4)));
+ #define VRAM      0x6000000
+ #else
+ extern unsigned char VRAM_[VRAM_SIZE] __attribute__ ((aligned (4)));
+-#define VRAM (u32)VRAM_
++// Must be pointer-width, not u32. Plenty of static initializers are of the
++// form (u16 *)(BG_VRAM + offset) -- see src/tileset_anims.c -- and those are
++// only compile-time constants if the expression stays an address constant.
++// Truncating a 64-bit address to u32 is an arithmetic conversion the compiler
++// cannot fold, so on a 64-bit build every one of them fails with "initializer
++// element is not a compile-time constant". On a 32-bit build the cast was a
++// no-op, which is why this went unnoticed. __UINTPTR_TYPE__ avoids needing
++// stdint.h in this header.
++#define VRAM ((__UINTPTR_TYPE__)VRAM_)
+ #endif
+ 
+ #define BG_VRAM           VRAM
 diff --git a/include/gba/flash_internal.h b/include/gba/flash_internal.h
 index 7ddb92e35..f3cf79d68 100755
 --- a/include/gba/flash_internal.h
