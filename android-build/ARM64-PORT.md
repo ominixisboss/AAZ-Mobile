@@ -94,8 +94,10 @@ and the battle script, battle anim and AI command readers.
 | in-track song pointers (m4a player) | 8,659 | bytecode |
 | script engine (`event_scripts`, `scrcmd.c`) | 17,438 | done |
 | battle scripts (`battle_scripts_1/2`, `battle_script_commands.c`) | 1,562 | done |
-| battle anim / AI / contest AI scripts | 5,817 | bytecode |
-| **converted so far** | **34,432 / 48,316** | **71%** |
+| battle AI scripts (`battle_ai_script_commands.c`) | 1,218 | done |
+| battle anim scripts | 4,231 | bytecode |
+| contest AI scripts | 364 | blocked, see below |
+| **converted so far** | **35,650 / 48,316** | **74%** |
 
 Each step is verified three ways: the arm64 object has zero remaining ABS32,
 the arm32 object is byte-for-byte unchanged in relocation count, and the
@@ -131,6 +133,24 @@ emitted in terms of `sizeof(void *)`, so both ABIs are right by construction.
 The same cross-check validated the derivation before any of it was applied:
 142 instruction lengths computed from the macros reproduced the hardcoded
 advances exactly, with zero mismatches.
+
+## Contest AI: deliberately not converted
+
+Contest AI does not follow the convention the other interpreters use. Its
+dispatcher consumes the opcode before calling the handler, so `gAIScriptPtr`
+points at the first operand rather than the instruction -- and worse, handlers
+delegate to helpers (`ContestAICmd_get_condition` and friends) that themselves
+consume a varying number of operands before the handler reads anything.
+
+That makes the instruction layout not statically derivable from the handler
+the way it is everywhere else. The cross-check refused it: with the
+instruction as the base, 88 of 100 pointer offsets failed to land on a 4-byte
+field; shifting one past the opcode still left 45 failing.
+
+Rather than apply a half-understood transformation to something that cannot
+be tested here, contest AI is left alone. It is 364 slots, 0.75% of the
+total. Converting it needs each helper's operand consumption modelled, or
+simply hand-auditing 136 commands.
 
 ## Status
 
