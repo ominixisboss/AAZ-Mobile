@@ -142,7 +142,7 @@ if ! ./android/SDL2/android-project/gradlew -p android :app:assembleDebug \
     # The ninja build emits ~1000 lines of progress; surface just the
     # diagnostics so a CI failure is readable without downloading the log.
     log "BUILD FAILED -- compiler diagnostics:"
-    grep -E '(fatal )?error:|^\s*FAILED:' "$BUILD_LOG" | sort -u | head -50
+    grep -Ei '(fatal )?error:|^\s*FAILED:' "$BUILD_LOG" | sort -u | head -50
     exit 1
 fi
 

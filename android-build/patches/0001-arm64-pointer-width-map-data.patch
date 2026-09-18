@@ -1,3 +1,12 @@
+diff --git a/asm/macros.inc b/asm/macros.inc
+index 95bb4e31b..ef463499f 100644
+--- a/asm/macros.inc
++++ b/asm/macros.inc
+@@ -1,3 +1,4 @@
++	.include "asm/macros/ptr.inc"
+ 	.include "asm/macros/asm.inc"
+ 	.include "asm/macros/function.inc"
+ 	.include "asm/macros/movement.inc"
 diff --git a/asm/macros/map.inc b/asm/macros/map.inc
 index 6e91c390c..02ff367d3 100644
 --- a/asm/macros/map.inc
@@ -98,24 +107,6 @@ index 000000000..0452c0cf1
 +	.4byte \label
 +	.endif
 +	.endm
-diff --git a/data/map_events.s b/data/map_events.s
-index cfa5799d3..273ec3ce5 100644
---- a/data/map_events.s
-+++ b/data/map_events.s
-@@ -1,3 +1,4 @@
-+	.include "asm/macros/ptr.inc"
- #include "constants/global.h"
- #include "constants/event_bg.h"
- #include "constants/event_object_movement.h"
-diff --git a/data/maps.s b/data/maps.s
-index 9d9ac2101..d4b2c6056 100644
---- a/data/maps.s
-+++ b/data/maps.s
-@@ -1,3 +1,4 @@
-+	.include "asm/macros/ptr.inc"
- #include "constants/global.h"
- #include "constants/layouts.h"
- #include "constants/map_types.h"
 diff --git a/tools/mapjson/mapjson.cpp b/tools/mapjson/mapjson.cpp
 index 8d8ec4e4e..764b71793 100644
 --- a/tools/mapjson/mapjson.cpp
