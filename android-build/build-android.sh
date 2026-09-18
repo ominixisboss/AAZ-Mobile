@@ -57,8 +57,11 @@ for patch in "$SCRIPT_DIR"/patches/*.patch; do
     name=$(basename "$patch")
     if git apply -R --check "$patch" 2>/dev/null; then
         echo "  $name already applied"
+    elif git apply "$patch"; then
+        echo "  applied $name"
     else
-        git apply "$patch" && echo "  applied $name"
+        echo "ERROR: $name failed to apply" >&2
+        exit 1
     fi
 done
 

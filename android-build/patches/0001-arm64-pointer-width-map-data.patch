@@ -11,6 +11,15 @@ index 6c607dd85..3f3716a2c 100644
              DEPENDS "${SOURCE}"
              VERBATIM)
      else()
+diff --git a/asm/macros.inc b/asm/macros.inc
+index 95bb4e31b..ef463499f 100644
+--- a/asm/macros.inc
++++ b/asm/macros.inc
+@@ -1,3 +1,4 @@
++	.include "asm/macros/ptr.inc"
+ 	.include "asm/macros/asm.inc"
+ 	.include "asm/macros/function.inc"
+ 	.include "asm/macros/movement.inc"
 diff --git a/asm/macros/event.inc b/asm/macros/event.inc
 index 3d6441687..bb4cf5c23 100644
 --- a/asm/macros/event.inc
