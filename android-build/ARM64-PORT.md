@@ -92,8 +92,9 @@ and the battle script, battle anim and AI command readers.
 | sound data (`m4a.inc`, `music_voice.inc`) | 3,774 | done |
 | song headers (`tools/mid2agb`) | 2,333 | done |
 | in-track song pointers (m4a player) | 8,659 | bytecode |
-| script bytecode (`event_scripts` and friends) | 24,763 | bytecode |
-| **converted so far** | **15,432 / 48,316** | **32%** |
+| script engine (`event_scripts`, `scrcmd.c`) | 17,438 | done |
+| battle / anim / AI scripts | 7,325 | bytecode |
+| **converted so far** | **32,870 / 48,316** | **68%** |
 
 Each step is verified three ways: the arm64 object has zero remaining ABS32,
 the arm32 object is byte-for-byte unchanged in relocation count, and the
