@@ -93,8 +93,9 @@ and the battle script, battle anim and AI command readers.
 | song headers (`tools/mid2agb`) | 2,333 | done |
 | in-track song pointers (m4a player) | 8,659 | bytecode |
 | script engine (`event_scripts`, `scrcmd.c`) | 17,438 | done |
-| battle / anim / AI scripts | 7,325 | bytecode |
-| **converted so far** | **32,870 / 48,316** | **68%** |
+| battle scripts (`battle_scripts_1/2`, `battle_script_commands.c`) | 1,562 | done |
+| battle anim / AI / contest AI scripts | 5,817 | bytecode |
+| **converted so far** | **34,432 / 48,316** | **71%** |
 
 Each step is verified three ways: the arm64 object has zero remaining ABS32,
 the arm32 object is byte-for-byte unchanged in relocation count, and the
@@ -106,6 +107,30 @@ indexed backwards by a literal `0xC`, which is `sizeof(struct ToneData)` on a
 32-bit target; on arm64 the compiler reports 24. Measured stride after the fix
 is 12 on arm32 and 24 on arm64, with the sample pointer at offset 4 and 8
 respectively -- matching `offsetof` exactly.
+
+## Deriving instruction layouts, rather than guessing them
+
+The battle interpreters hide the pointer width in three separate places
+besides the emission: `gBattlescriptCurrInstr += N` advances, `... + N` read
+offsets into the instruction, and helpers such as `JumpIfMoveFailed(N, ...)`
+that take an instruction length as an argument.
+
+Classifying fields by parameter name does not work. `tryfaintmon` emits
+`.int NULL` into a pointer field, and shares its opcode with
+`tryfaintmon_spikes`, which names the same field `ptr` -- widening one and not
+the other would have produced two different layouts for one opcode.
+
+What does work is deriving the truth from the handlers: every
+`ReadStreamPtr(gBattlescriptCurrInstr + N)` names a pointer offset for that
+opcode. Cross-checking those against the layouts parsed out of
+`battle_script.inc` confirmed 112 pointer fields, with the only two
+non-matches being 1-byte instructions that read no operands at all. Every
+advance, offset and helper length is then recomputed from that layout and
+emitted in terms of `sizeof(void *)`, so both ABIs are right by construction.
+
+The same cross-check validated the derivation before any of it was applied:
+142 instruction lengths computed from the macros reproduced the hardcoded
+advances exactly, with zero mismatches.
 
 ## Status
 
