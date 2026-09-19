@@ -360,3 +360,57 @@ After the fix, all 570 symbols in the game data that begin a pointer table are
 8-aligned. arm32 output is unchanged: `palign` is `.balign 4` there and the
 labels were already 4-aligned, verified byte-identical on the generated
 `groups.inc`.
+
+## The remaining class: pointers truncated through 32-bit integers
+
+A crash report from a real device -- "crashes when I get to the Pokemon screen"
+-- turned out to be the visible tip of a class the compiler had been reporting
+all along. `-Wpointer-to-int-cast` and `-Wint-to-pointer-cast` are on by
+default, and a full 64-bit build emits **136** of them. Each one is a pointer
+narrowed to 32 bits, and each is a latent crash the moment the value is used as
+an address again.
+
+Three were on the path to that screen and are fixed:
+
+### GetWindowAttribute / SetWindowAttribute
+
+The pair passed `WINDOW_TILE_DATA` -- `struct Window`'s `tileData` pointer --
+through a `u32`, and all twelve callers cast the result straight back to
+`u8 *`: drawing a Pokemon's picture (`trainer_pokemon_sprites.c`), the storage
+system, the bag, the battle interface, the Pokedex cry screen. Now `uintptr_t`,
+which is identical on a 32-bit build.
+
+### SetTaskFuncWithFollowupFunc
+
+This stored a **code pointer** as two `s16` halves in `data[14]`/`data[15]`, so
+`SwitchTaskToFollowupFunc` jumped to a truncated address. `party_menu.c` uses
+it for `Task_PartyMenuModifyHP`, which is reached by healing a Pokemon from the
+party screen. On 64-bit the followup is now kept beside the task.
+
+### SetWordTaskArg / GetWordTaskArg
+
+Same packing, same problem, for data pointers: `menu.c` stored a `malloc`ed
+tile buffer this way and then `Free()`d the truncated result -- that task backs
+graphics loading for menus generally. Ten call sites across `menu.c`,
+`easy_chat.c`, `pokemon_jump.c`, `pokenav.c` and `pokenav_menu_handler_gfx.c`
+now use pointer-width accessors.
+
+Widening these to four slots was not possible: `easy_chat` stores pointers at
+slots 2 and 4, `pokenav_menu_handler_gfx` at 1 and 3, and `pokemon_jump` at
+slot 14 of 16, so four-slot values would overlap each other or run off the end
+of `data[]`. The pointers are kept in a side table keyed by task and slot,
+leaving `data[]` exactly as it was. The 32-bit build keeps the original
+packing, since some of these tasks are inspected through `data[]` elsewhere.
+
+### The other 133
+
+They are concentrated in `battle_factory_screen.c` (29), `m4a.c` (9),
+`fldeff_misc.c` (6), `field_door.c` (6), `shop.c` (5), `pokemon_animation.c`
+(5) and `pokedex.c` (5), and they are mostly the same idiom: a pointer stashed
+in a `s16` sprite or task data slot. Each needs the same treatment and a look
+at what else reads those slots, so they are being worked through rather than
+bulk-edited.
+
+The useful part is that the list is exact and free: `make -f Makefile_pc
+NATIVE_LINUX=1 BITS=64` prints every one. No guessing about which screen breaks
+next.

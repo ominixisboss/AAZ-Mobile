@@ -5203,6 +5203,47 @@ index 7c180e961..b2d1d9dab 100755
  u32 ScriptReadWord(struct ScriptContext *ctx);
  void LockPlayerFieldControls(void);
  void UnlockPlayerFieldControls(void);
+diff --git a/include/task.h b/include/task.h
+index 9d1ee42c4..2ea471d85 100755
+--- a/include/task.h
++++ b/include/task.h
+@@ -35,4 +35,16 @@ u8 GetTaskCount(void);
+ void SetWordTaskArg(u8 taskId, u8 dataElem, u32 value);
+ u32 GetWordTaskArg(u8 taskId, u8 dataElem);
+ 
++// Pointer-width task arguments. SetWordTaskArg packs a value into two s16
++// data slots, which silently truncates a pointer on a 64-bit build -- and the
++// callers that store pointers this way cast the result straight back to a
++// function pointer, a struct pointer or a buffer that gets Free()d.
++//
++// Widening to four slots is not an option: easy_chat stores pointers at slots
++// 2 and 4, pokenav_menu_handler_gfx at 1 and 3, and pokemon_jump at slot 14 of
++// 16, so four-slot values would overlap each other or run off the end. These
++// keep the pointer beside the task instead and leave data[] untouched.
++void SetPtrTaskArg(u8 taskId, u8 dataElem, const void *value);
++void *GetPtrTaskArg(u8 taskId, u8 dataElem);
++
+ #endif // GUARD_TASK_H
+diff --git a/include/window.h b/include/window.h
+index 0f2dff2a8..125eedf1b 100644
+--- a/include/window.h
++++ b/include/window.h
+@@ -66,8 +66,13 @@ void CopyToWindowPixelBuffer(u8 windowId, const void *src, u16 size, u16 tileOff
+ void FillWindowPixelBuffer(u8 windowId, u8 fillValue);
+ void ScrollWindow(u8 windowId, u8 direction, u8 distance, u8 fillValue);
+ void CallWindowFunction(u8 windowId, void ( *func)(u8, u8, u8, u8, u8, u8));
+-bool8 SetWindowAttribute(u8 windowId, u8 attributeId, u32 value);
+-u32 GetWindowAttribute(u8 windowId, u8 attributeId);
++// uintptr_t, not u32: WINDOW_TILE_DATA carries struct Window's tileData
++// pointer through this pair, and every caller casts the result straight back
++// to u8 *. At u32 that silently truncates a 64-bit pointer, which is a crash
++// the moment the result is dereferenced -- drawing a Pokemon's picture, the
++// storage system, the bag, the battle interface. Identical on a 32-bit build.
++bool8 SetWindowAttribute(u8 windowId, u8 attributeId, uintptr_t value);
++uintptr_t GetWindowAttribute(u8 windowId, u8 attributeId);
+ u16 AddWindow8Bit(const struct WindowTemplate *template);
+ void FillWindowPixelBuffer8Bit(u8 windowId, u8 fillValue);
+ void FillWindowPixelRect8Bit(u8 windowId, u8 fillValue, u16 x, u16 y, u16 width, u16 height);
 diff --git a/sound/music_player_table.inc b/sound/music_player_table.inc
 index b16829473..5c31bad8d 100644
 --- a/sound/music_player_table.inc
@@ -13038,6 +13079,56 @@ index 443e57f8b..3c8839713 100644
 -        gAIScriptPtr += 4;
 +        gAIScriptPtr += 0 + sizeof(void *);
  }
+diff --git a/src/easy_chat.c b/src/easy_chat.c
+index 5fdf762b8..e7c754a30 100644
+--- a/src/easy_chat.c
++++ b/src/easy_chat.c
+@@ -1299,8 +1299,8 @@ void DoEasyChatScreen(u8 type, u16 *words, MainCallback exitCallback, u8 display
+     taskId = CreateTask(Task_InitEasyChatScreen, 0);
+     gTasks[taskId].tType = type;
+     gTasks[taskId].tPersonType = displayedPersonType;
+-    SetWordTaskArg(taskId, TASKIDX_WORDS, (u32)words);
+-    SetWordTaskArg(taskId, TASKIDX_EXIT_CALLBACK, (u32)exitCallback);
++    SetPtrTaskArg(taskId, TASKIDX_WORDS, words);
++    SetPtrTaskArg(taskId, TASKIDX_EXIT_CALLBACK, exitCallback);
+     SetMainCallback2(CB2_EasyChatScreen);
+ }
+ 
+@@ -1386,7 +1386,7 @@ static void Task_EasyChatScreen(u8 taskId)
+         break;
+     case MAINSTATE_EXIT:
+         if (!gPaletteFade.active)
+-            ExitEasyChatScreen((MainCallback)GetWordTaskArg(taskId, TASKIDX_EXIT_CALLBACK));
++            ExitEasyChatScreen((MainCallback)GetPtrTaskArg(taskId, TASKIDX_EXIT_CALLBACK));
+         break;
+     case MAINSTATE_WAIT_FADE_IN:
+         if (!gPaletteFade.active)
+@@ -1414,21 +1414,21 @@ static bool8 InitEasyChatScreen(u8 taskId)
+         if (!InitEasyChatScreenWordData())
+         {
+             // Alloc failed, exit
+-            ExitEasyChatScreen((MainCallback)GetWordTaskArg(taskId, TASKIDX_EXIT_CALLBACK));
++            ExitEasyChatScreen((MainCallback)GetPtrTaskArg(taskId, TASKIDX_EXIT_CALLBACK));
+         }
+         break;
+     case 2:
+-        if (!InitEasyChatScreenStruct(tType, (u16 *)GetWordTaskArg(taskId, TASKIDX_WORDS), tPersonType))
++        if (!InitEasyChatScreenStruct(tType, (u16 *)GetPtrTaskArg(taskId, TASKIDX_WORDS), tPersonType))
+         {
+             // Alloc failed, exit
+-            ExitEasyChatScreen((MainCallback)GetWordTaskArg(taskId, TASKIDX_EXIT_CALLBACK));
++            ExitEasyChatScreen((MainCallback)GetPtrTaskArg(taskId, TASKIDX_EXIT_CALLBACK));
+         }
+         break;
+     case 3:
+         if (!InitEasyChatScreenControl())
+         {
+             // Alloc failed, exit
+-            ExitEasyChatScreen((MainCallback)GetWordTaskArg(taskId, TASKIDX_EXIT_CALLBACK));
++            ExitEasyChatScreen((MainCallback)GetPtrTaskArg(taskId, TASKIDX_EXIT_CALLBACK));
+         }
+         break;
+     case 4:
 diff --git a/src/field_effect.c b/src/field_effect.c
 index 5dcc4b3c0..c79a5f392 100644
 --- a/src/field_effect.c
@@ -13132,6 +13223,28 @@ index ba8827690..3b4d51872 100644
      .part1 = TUNE,
      .tuneValue2 = C_V + 16,
      .cont = {VOICE, 0}, // part0 jumps here with gotoCmd
+diff --git a/src/menu.c b/src/menu.c
+index dd43e310d..1b1f7e7b2 100644
+--- a/src/menu.c
++++ b/src/menu.c
+@@ -1805,7 +1805,7 @@ void DecompressAndLoadBgGfxUsingHeap(u8 bgId, const void *src, u32 size, u16 off
+     {
+         u8 taskId = CreateTask(task_free_buf_after_copying_tile_data_to_vram, 0);
+         gTasks[taskId].data[0] = copy_decompressed_tile_data_to_vram(bgId, ptr, size, offset, mode);
+-        SetWordTaskArg(taskId, 1, (u32)ptr);
++        SetPtrTaskArg(taskId, 1, ptr);
+     }
+ }
+ 
+@@ -1813,7 +1813,7 @@ void task_free_buf_after_copying_tile_data_to_vram(u8 taskId)
+ {
+     if (!CheckForSpaceForDma3Request(gTasks[taskId].data[0]))
+     {
+-        Free((void *)GetWordTaskArg(taskId, 1));
++        Free(GetPtrTaskArg(taskId, 1));
+         DestroyTask(taskId);
+     }
+ }
 diff --git a/src/platform/bios.c b/src/platform/bios.c
 index f13c6fd90..34bc3ceff 100644
 --- a/src/platform/bios.c
@@ -13151,6 +13264,141 @@ index f13c6fd90..34bc3ceff 100644
  struct SoundInfo *SOUND_INFO_PTR;
  
  static uint32_t CPUReadMemory(const void *src)
+diff --git a/src/pokemon_jump.c b/src/pokemon_jump.c
+index 326512acf..87c669994 100644
+--- a/src/pokemon_jump.c
++++ b/src/pokemon_jump.c
+@@ -545,7 +545,7 @@ void StartPokemonJump(u16 partyId, MainCallback exitCallback)
+             sPokemonJump->multiplayerId = GetMultiplayerId();
+             InitJumpMonInfo(&sPokemonJump->monInfo[sPokemonJump->multiplayerId], &gPlayerParty[partyId]);
+             InitGame(sPokemonJump);
+-            SetWordTaskArg(taskId, 2, (u32)sPokemonJump);
++            SetPtrTaskArg(taskId, 2, sPokemonJump);
+             SetMainCallback2(CB2_PokemonJump);
+             return;
+         }
+@@ -1645,7 +1645,7 @@ static void Task_CommunicateMonInfo(u8 taskId)
+ {
+     int i;
+     s16 *data = gTasks[taskId].data;
+-    struct PokemonJump *jump = (struct PokemonJump *)GetWordTaskArg(taskId, DATAIDX_GAME_STRUCT);
++    struct PokemonJump *jump = (struct PokemonJump *)GetPtrTaskArg(taskId, DATAIDX_GAME_STRUCT);
+ 
+     switch (tState)
+     {
+@@ -1679,7 +1679,7 @@ static void Task_CommunicateMonInfo(u8 taskId)
+ static void SetTaskWithPokeJumpStruct(TaskFunc func, u8 taskPriority)
+ {
+     u8 taskId = CreateTask(func, taskPriority);
+-    SetWordTaskArg(taskId, DATAIDX_GAME_STRUCT, (u32)sPokemonJump);
++    SetPtrTaskArg(taskId, DATAIDX_GAME_STRUCT, sPokemonJump);
+ }
+ 
+ #undef tState
+@@ -3026,7 +3026,7 @@ static void StartPokeJumpGfx(struct PokemonJumpGfx *jumpGfx)
+     InitPokeJumpGfx(sPokemonJumpGfx);
+     taskId = CreateTask(Task_RunPokeJumpGfxFunc, 3);
+     sPokemonJumpGfx->taskId = taskId;
+-    SetWordTaskArg(sPokemonJumpGfx->taskId, 2, (u32) sPokemonJumpGfx);
++    SetPtrTaskArg(sPokemonJumpGfx->taskId, 2, sPokemonJumpGfx);
+     SetUpPokeJumpGfxFunc(LoadPokeJumpGfx);
+ }
+ 
+@@ -3156,7 +3156,7 @@ static bool32 IsPokeJumpGfxFuncFinished(void)
+ 
+ static void SetUpPokeJumpGfxFunc(void (*func)(void))
+ {
+-    SetWordTaskArg(sPokemonJumpGfx->taskId, 0, (u32) func);
++    SetPtrTaskArg(sPokemonJumpGfx->taskId, 0, func);
+     sPokemonJumpGfx->mainState = 0;
+     sPokemonJumpGfx->funcFinished = FALSE;
+ }
+@@ -3166,7 +3166,7 @@ static void Task_RunPokeJumpGfxFunc(u8 taskId)
+     if (!sPokemonJumpGfx->funcFinished)
+     {
+         // Read the function set in the data by SetUpPokeJumpGfxFunc
+-        void (*func)(void) = (void *)(GetWordTaskArg(taskId, 0));
++        void (*func)(void) = GetPtrTaskArg(taskId, 0);
+ 
+         func();
+     }
+diff --git a/src/pokenav.c b/src/pokenav.c
+index 03f48ee36..637034d08 100644
+--- a/src/pokenav.c
++++ b/src/pokenav.c
+@@ -216,7 +216,7 @@ u32 CreateLoopedTask(LoopedTask loopedTask, u32 priority)
+     else
+         taskId = CreateTask(Task_RunLoopedTask_LinkMode, priority);
+ 
+-    SetWordTaskArg(taskId, 1, (u32)loopedTask);
++    SetPtrTaskArg(taskId, 1, loopedTask);
+ 
+     gTasks[taskId].data[3] = gNextLoopedTaskId;
+     return LOOPED_TASK_ID(taskId, gNextLoopedTaskId++);
+@@ -242,7 +242,7 @@ bool32 FuncIsActiveLoopedTask(LoopedTask func)
+     {
+         if (gTasks[i].isActive
+             && (gTasks[i].func == Task_RunLoopedTask || gTasks[i].func == Task_RunLoopedTask_LinkMode)
+-            && (LoopedTask)GetWordTaskArg(i, 1) == func)
++            && (LoopedTask)GetPtrTaskArg(i, 1) == func)
+             return TRUE;
+     }
+     return FALSE;
+@@ -250,7 +250,7 @@ bool32 FuncIsActiveLoopedTask(LoopedTask func)
+ 
+ static void Task_RunLoopedTask(u8 taskId)
+ {
+-    LoopedTask loopedTask = (LoopedTask)GetWordTaskArg(taskId, 1);
++    LoopedTask loopedTask = (LoopedTask)GetPtrTaskArg(taskId, 1);
+     s16 *state = &gTasks[taskId].data[0];
+     bool32 exitLoop = FALSE;
+ 
+@@ -290,7 +290,7 @@ static void Task_RunLoopedTask_LinkMode(u8 taskId)
+     if (Overworld_IsRecvQueueAtMax())
+         return;
+ 
+-    task = (LoopedTask)GetWordTaskArg(taskId, 1);
++    task = (LoopedTask)GetPtrTaskArg(taskId, 1);
+     state = &gTasks[taskId].data[0];
+     action = task(*state);
+     switch (action)
+diff --git a/src/pokenav_menu_handler_gfx.c b/src/pokenav_menu_handler_gfx.c
+index ce17f33cf..f45674312 100644
+--- a/src/pokenav_menu_handler_gfx.c
++++ b/src/pokenav_menu_handler_gfx.c
+@@ -1266,8 +1266,8 @@ static void Task_MoveBgDots(u8 taskId)
+ static void CreateBgDotPurplePalTask(void)
+ {
+     u8 taskId = CreateTask(Task_UpdateBgDotsPalette, 3);
+-    SetWordTaskArg(taskId, 1, (uintptr_t)(sPokenavBgDotsPal + 1));
+-    SetWordTaskArg(taskId, 3, (uintptr_t)(sPokenavBgDotsPal + 7));
++    SetPtrTaskArg(taskId, 1, sPokenavBgDotsPal + 1);
++    SetPtrTaskArg(taskId, 3, sPokenavBgDotsPal + 7);
+ }
+ 
+ static void ChangeBgDotsColorToPurple(void)
+@@ -1278,8 +1278,8 @@ static void ChangeBgDotsColorToPurple(void)
+ static void CreateBgDotLightBluePalTask(void)
+ {
+     u8 taskId = CreateTask(Task_UpdateBgDotsPalette, 3);
+-    SetWordTaskArg(taskId, 1, (uintptr_t)(sPokenavBgDotsPal + 7));
+-    SetWordTaskArg(taskId, 3, (uintptr_t)(sPokenavBgDotsPal + 1));
++    SetPtrTaskArg(taskId, 1, sPokenavBgDotsPal + 7);
++    SetPtrTaskArg(taskId, 3, sPokenavBgDotsPal + 1);
+ }
+ 
+ static bool32 IsTaskActive_UpdateBgDotsPalette(void)
+@@ -1291,8 +1291,8 @@ static void Task_UpdateBgDotsPalette(u8 taskId)
+ {
+     u16 sp8[2];
+     s16 *data = gTasks[taskId].data;
+-    const u16 *pal1 = (const u16 *)GetWordTaskArg(taskId, 1);
+-    const u16 *pal2 = (const u16 *)GetWordTaskArg(taskId, 3);
++    const u16 *pal1 = (const u16 *)GetPtrTaskArg(taskId, 1);
++    const u16 *pal2 = (const u16 *)GetPtrTaskArg(taskId, 3);
+ 
+     PokenavCopyPalette(pal1, pal2, 2, 12, ++data[0], sp8);
+     LoadPalette(sp8, BG_PLTT_ID(3) + 1, PLTT_SIZEOF(2));
 diff --git a/src/save.c b/src/save.c
 index f60b25bd1..d1cea023e 100644
 --- a/src/save.c
@@ -13177,6 +13425,22 @@ index f60b25bd1..d1cea023e 100644
  STATIC_ASSERT(sizeof(struct SaveBlock2) <= SECTOR_DATA_SIZE, SaveBlock2FreeSpace);
  STATIC_ASSERT(sizeof(struct SaveBlock1) <= SECTOR_DATA_SIZE * (SECTOR_ID_SAVEBLOCK1_END - SECTOR_ID_SAVEBLOCK1_START + 1), SaveBlock1FreeSpace);
  STATIC_ASSERT(sizeof(struct PokemonStorage) <= SECTOR_DATA_SIZE * (SECTOR_ID_PKMN_STORAGE_END - SECTOR_ID_PKMN_STORAGE_START + 1), PokemonStorageFreeSpace);
+diff --git a/src/save_failed_screen.c b/src/save_failed_screen.c
+index 6d3ab2fd7..0926fcce7 100644
+--- a/src/save_failed_screen.c
++++ b/src/save_failed_screen.c
+@@ -207,9 +207,9 @@ static void CB2_SaveFailedScreen(void)
+         LoadBgTiles(0, gTextWindowFrame1_Gfx, 0x120, 0x214);
+         InitWindows(sDummyWindowTemplate);
+         sWindowIds[TEXT_WIN_ID] = AddWindowWithoutTileMap(sWindowTemplate_Text);
+-        SetWindowAttribute(sWindowIds[TEXT_WIN_ID], 7, (u32)&gDecompressionBuffer[0x2800]);
++        SetWindowAttribute(sWindowIds[TEXT_WIN_ID], 7, (uintptr_t)&gDecompressionBuffer[0x2800]);
+         sWindowIds[CLOCK_WIN_ID] = AddWindowWithoutTileMap(sWindowTemplate_Clock);
+-        SetWindowAttribute(sWindowIds[CLOCK_WIN_ID], 7, (u32)&gDecompressionBuffer[0x3D00]);
++        SetWindowAttribute(sWindowIds[CLOCK_WIN_ID], 7, (uintptr_t)&gDecompressionBuffer[0x3D00]);
+         DeactivateAllTextPrinters();
+         ResetSpriteData();
+         ResetTasks();
 diff --git a/src/scrcmd.c b/src/scrcmd.c
 index 39a6ec7cc..5d3487054 100644
 --- a/src/scrcmd.c
@@ -13528,6 +13792,110 @@ index 3136340d7..c57703341 100644
  u32 ScriptReadWord(struct ScriptContext *ctx)
  {
      u32 value0 = *(ctx->scriptPtr++);
+diff --git a/src/task.c b/src/task.c
+index b188cbbcb..e81cab9dd 100644
+--- a/src/task.c
++++ b/src/task.c
+@@ -136,6 +136,24 @@ void TaskDummy(u8 taskId)
+ {
+ }
+ 
++#if __SIZEOF_POINTER__ > 4
++// The followup function is a code pointer and does not fit in the two s16
++// data slots the 32-bit build packs it into, so it is kept beside the task.
++// Truncating it would mean jumping to a garbage address the moment the task
++// switches over -- party_menu.c uses this for Task_PartyMenuModifyHP.
++static TaskFunc sFollowupFuncs[NUM_TASKS];
++
++void SetTaskFuncWithFollowupFunc(u8 taskId, TaskFunc func, TaskFunc followupFunc)
++{
++    sFollowupFuncs[taskId] = followupFunc;
++    gTasks[taskId].func = func;
++}
++
++void SwitchTaskToFollowupFunc(u8 taskId)
++{
++    gTasks[taskId].func = sFollowupFuncs[taskId];
++}
++#else
+ void SetTaskFuncWithFollowupFunc(u8 taskId, TaskFunc func, TaskFunc followupFunc)
+ {
+     u8 followupFuncIndex = NUM_TASK_DATA - 2; // Should be const.
+@@ -151,6 +169,7 @@ void SwitchTaskToFollowupFunc(u8 taskId)
+ 
+     gTasks[taskId].func = (TaskFunc)((u16)(gTasks[taskId].data[followupFuncIndex]) | (gTasks[taskId].data[followupFuncIndex + 1] << 16));
+ }
++#endif
+ 
+ bool8 FuncIsActiveTask(TaskFunc func)
+ {
+@@ -202,3 +221,35 @@ u32 GetWordTaskArg(u8 taskId, u8 dataElem)
+     else
+         return 0;
+ }
++
++#if __SIZEOF_POINTER__ > 4
++// A pointer does not fit in two s16 slots, so it is kept here instead, keyed
++// by task and slot. data[] keeps whatever the caller put there.
++static const void *sPtrTaskArgs[NUM_TASKS][NUM_TASK_DATA];
++
++void SetPtrTaskArg(u8 taskId, u8 dataElem, const void *value)
++{
++    if (taskId < NUM_TASKS && dataElem < NUM_TASK_DATA)
++        sPtrTaskArgs[taskId][dataElem] = value;
++}
++
++void *GetPtrTaskArg(u8 taskId, u8 dataElem)
++{
++    if (taskId < NUM_TASKS && dataElem < NUM_TASK_DATA)
++        return (void *)sPtrTaskArgs[taskId][dataElem];
++    return NULL;
++}
++#else
++// A 32-bit pointer fits in the two slots, so keep the original representation
++// exactly: some of these tasks are inspected through data[] elsewhere.
++void SetPtrTaskArg(u8 taskId, u8 dataElem, const void *value)
++{
++    SetWordTaskArg(taskId, dataElem, (u32)value);
++}
++
++void *GetPtrTaskArg(u8 taskId, u8 dataElem)
++{
++    return (void *)GetWordTaskArg(taskId, dataElem);
++}
++#endif
++
+diff --git a/src/window.c b/src/window.c
+index 644048fad..61eb5d5cc 100644
+--- a/src/window.c
++++ b/src/window.c
+@@ -528,7 +528,7 @@ void CallWindowFunction(u8 windowId, void ( *func)(u8, u8, u8, u8, u8, u8))
+     func(window.bg, window.tilemapLeft, window.tilemapTop, window.width, window.height, window.paletteNum);
+ }
+ 
+-bool8 SetWindowAttribute(u8 windowId, u8 attributeId, u32 value)
++bool8 SetWindowAttribute(u8 windowId, u8 attributeId, uintptr_t value)
+ {
+     switch (attributeId)
+     {
+@@ -555,7 +555,7 @@ bool8 SetWindowAttribute(u8 windowId, u8 attributeId, u32 value)
+     }
+ }
+ 
+-u32 GetWindowAttribute(u8 windowId, u8 attributeId)
++uintptr_t GetWindowAttribute(u8 windowId, u8 attributeId)
+ {
+     switch (attributeId)
+     {
+@@ -574,7 +574,7 @@ u32 GetWindowAttribute(u8 windowId, u8 attributeId)
+     case WINDOW_BASE_BLOCK:
+         return gWindows[windowId].window.baseBlock;
+     case WINDOW_TILE_DATA:
+-        return (u32)(gWindows[windowId].tileData);
++        return (uintptr_t)(gWindows[windowId].tileData);
+     default:
+         return 0;
+     }
 diff --git a/tools/mapjson/mapjson.cpp b/tools/mapjson/mapjson.cpp
 index 8d8ec4e4e..0c07ccca0 100644
 --- a/tools/mapjson/mapjson.cpp
