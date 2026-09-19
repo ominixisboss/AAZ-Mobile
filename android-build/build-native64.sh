@@ -53,8 +53,10 @@ make -f Makefile_pc NATIVE_LINUX=1 BITS=64 -j"$(nproc)" 2>&1 | tee build64.log
 # the compiler reports each one. There were 136 when this port started; the
 # count is held at zero so the class cannot creep back in.
 log "Checking for pointer truncation"
+# `|| true` matters: with `set -o pipefail` a grep that matches nothing exits
+# 1 and would kill the script exactly when there is nothing wrong.
 TRUNC=$(grep -E "warning: cast (to pointer from|from pointer to) integer of different size" build64.log \
-        | sed -E 's#^.*/([^/]+\.c):([0-9]+):.*#\1:\2#' | sort -u)
+        | sed -E 's#^.*/([^/]+\.c):([0-9]+):.*#\1:\2#' | sort -u || true)
 if [ -n "$TRUNC" ]; then
     echo "ERROR: $(echo "$TRUNC" | wc -l) pointer truncation site(s):" >&2
     echo "$TRUNC" >&2
