@@ -414,3 +414,60 @@ bulk-edited.
 The useful part is that the list is exact and free: `make -f Makefile_pc
 NATIVE_LINUX=1 BITS=64` prints every one. No guessing about which screen breaks
 next.
+
+## All 136 truncations fixed
+
+The count is now zero, and `android-build/build-native64.sh` fails the build if
+it ever rises again. How they were handled, since they were not all the same
+problem:
+
+**A handle instead of the pointer (the bulk).** Most of these split a pointer
+into two 16-bit halves and stored it in `s16` task or sprite data. Widening
+those slots is not possible -- `easy_chat` stores pointers at slots 2 and 4,
+`pokenav_menu_handler_gfx` at 1 and 3, `pokemon_jump` at slot 14 of 16, so
+four-slot values would overlap or run off the end. `src/pointer_handle.c`
+instead packs a pointer into a 32-bit *handle* indexing a side table. A handle
+splits, masks, byte-swaps and reassembles exactly the way the old value did, so
+every storage layout and every piece of caller arithmetic is untouched. On a
+32-bit build `PackPtr`/`UnpackPtr` are identity casts.
+
+This covered `battle_factory_screen.c` (29 sites), the field-move callbacks in
+the `fldeff_*` files, `shop.c`, `field_door.c`, `pokeball.c`,
+`pokemon_animation.c`, `apprentice.c`, `record_mixing.c`, `list_menu.c`,
+`pokemon.c`'s task macros, and the `StorePointerInVars` / `StoreWordInTwoHalfwords`
+helper pairs.
+
+**Not pointers at all.** Three sites were arithmetic that a mechanical pass
+would have broken, and the compiler warning did not distinguish them:
+`battle_script_commands.c` takes a pointer *difference* to measure a string,
+`field_control_avatar.c` reads a packed item/flag out of a union member that
+only holds an address for other event types, and `mystery_event_script.c` uses
+a base address for offset arithmetic. These became `uintptr_t` casts.
+
+Two more went the other way: `battle_anim_effects_1.c` and `battle_anim_fight.c`
+stored an *integer* (a palette mask, a 24.8 fixed-point accumulator) through the
+*pointer* helper. A handle would have silently corrupted them, so they now use
+the raw-word helper.
+
+**Genuine pointer arithmetic through a narrow int.** `m4a.c` advanced channel
+pointers with `(s32)chan + sizeof(...)`, which truncates. This one mattered:
+the sound driver runs on this target, and it only appeared to work because the
+native binary happens to load at a low address. Under a PIE on Android the
+addresses are large and it would have broken.
+
+**Map script tables.** `MapHeaderGetScriptTable` walks its table byte-wise with
+a hardcoded stride of 5, and `MapHeaderCheckScriptTable` with 8. Both assumed a
+4-byte pointer. Their labels are in hand-written `scripts.inc` files and carry
+no alignment, so the `map_script` macros now emit `ptr_stream` (packed, like
+bytecode) rather than `ptr` (aligning), which keeps the stride deterministic:
+`1 + sizeof(void *)` and `sizeof(void *)`. `T2_READ_PTR` reads at the target's
+width, byte-wise, so an unaligned table position is fine. At 32 bits
+`ptr_stream` and `ptr` emit identical bytes, verified.
+
+**Window tile data, task followups, task args.** Covered in the previous
+section -- these were the three on the path to the party screen.
+
+One trap worth recording: a `//` comment in `asm/macros/map.inc` silently
+stopped the macro below it from being defined, with no error on the comment
+line itself -- the failure showed up much later as "no such instruction:
+map_script". These files take one-line `/* */` comments only.

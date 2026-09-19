@@ -47,7 +47,20 @@ ls sound/songs/midi/*.mid | sed 's/\.mid$/.s/' > "$WORK_DIR/.songs"
 xargs -a "$WORK_DIR/.songs" make -j"$(nproc)" >/dev/null
 
 log "Building 64-bit native binary"
-make -f Makefile_pc NATIVE_LINUX=1 BITS=64 -j"$(nproc)"
+make -f Makefile_pc NATIVE_LINUX=1 BITS=64 -j"$(nproc)" 2>&1 | tee build64.log
+
+# Every pointer narrowed to 32 bits is a latent crash on a 64-bit target, and
+# the compiler reports each one. There were 136 when this port started; the
+# count is held at zero so the class cannot creep back in.
+log "Checking for pointer truncation"
+TRUNC=$(grep -E "warning: cast (to pointer from|from pointer to) integer of different size" build64.log \
+        | sed -E 's#^.*/([^/]+\.c):([0-9]+):.*#\1:\2#' | sort -u)
+if [ -n "$TRUNC" ]; then
+    echo "ERROR: $(echo "$TRUNC" | wc -l) pointer truncation site(s):" >&2
+    echo "$TRUNC" >&2
+    exit 1
+fi
+echo "OK: no pointer truncation"
 file pokeemerald | grep -q 'ELF 64-bit' || { echo "ERROR: not a 64-bit binary" >&2; exit 1; }
 
 # A pointer-width bug shows up as SIGSEGV/SIGBUS within the first few seconds,
