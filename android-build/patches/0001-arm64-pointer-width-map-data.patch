@@ -13529,7 +13529,7 @@ index 3136340d7..c57703341 100644
  {
      u32 value0 = *(ctx->scriptPtr++);
 diff --git a/tools/mapjson/mapjson.cpp b/tools/mapjson/mapjson.cpp
-index 8d8ec4e4e..764b71793 100644
+index 8d8ec4e4e..0c07ccca0 100644
 --- a/tools/mapjson/mapjson.cpp
 +++ b/tools/mapjson/mapjson.cpp
 @@ -139,24 +139,24 @@ string generate_map_header_text(Json map_data, Json layouts_data) {
@@ -13592,8 +13592,15 @@ index 8d8ec4e4e..764b71793 100644
           << "\tmap_events " << objects_label << ", " << warps_label << ", "
           << coords_label << ", " << bgs_label << "\n\n";
  
-@@ -443,13 +443,13 @@ string generate_groups_text(Json groups_data) {
-         text << group << "::\n";
+@@ -440,16 +440,19 @@ string generate_groups_text(Json groups_data) {
+ 
+     for (auto &key : groups_data["group_order"].array_items()) {
+         string group = json_to_string(key);
+-        text << group << "::\n";
++        // palign: each group table is an array of pointers, so the label must
++        // be pointer-aligned. Without it the first ptr's own .balign lands
++        // after the label on a 64-bit build and skews the whole table by 4.
++        text << "\tpalign\n" << group << "::\n";
          auto maps = groups_data[group].array_items();
          for (Json &map_name : maps)
 -            text << "\t.4byte " << json_to_string(map_name) << "\n";
@@ -13609,7 +13616,7 @@ index 8d8ec4e4e..764b71793 100644
      text << "\n";
  
      return text.str();
-@@ -600,14 +600,14 @@ string generate_layout_headers_text(Json layouts_data) {
+@@ -600,14 +603,14 @@ string generate_layout_headers_text(Json layouts_data) {
               << "\t.incbin \"" << json_to_string(layout, "border_filepath") << "\"\n\n"
               << blockdata_label << "::\n"
               << "\t.incbin \"" << json_to_string(layout, "blockdata_filepath") << "\"\n\n"
@@ -13629,7 +13636,7 @@ index 8d8ec4e4e..764b71793 100644
          if (version == "firered") {
              text << "\t.byte " << json_to_string(layout, "border_width") << "\n"
                   << "\t.byte " << json_to_string(layout, "border_height") << "\n"
-@@ -624,13 +624,13 @@ string generate_layouts_table_text(Json layouts_data) {
+@@ -624,13 +627,13 @@ string generate_layouts_table_text(Json layouts_data) {
  
      text << get_generated_warning("data/layouts/layouts.json", true);
  

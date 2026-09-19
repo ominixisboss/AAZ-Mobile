@@ -337,3 +337,26 @@ arm32 output is unaffected -- `data/sound_data.s` assembles to a byte-identical
 Headless, nothing checks what is on screen. The game reaches and sustains its
 main loop; it has not been shown to render correctly, accept input, battle, or
 save. Those need a real device or a display.
+
+### 5. Map group tables were not pointer-aligned (found by audit)
+
+Bug 1 was found by luck -- the intro music happened to hit it. Since the same
+mistake anywhere else would only surface later in the game, the class was swept
+systematically: every label in the assembly that is immediately followed by a
+pointer, cross-checked against its actual address in the linked 64-bit binary.
+
+That found `gMapGroup_TownsAndRoutes` at an address 4 mod 8. It is the first of
+the per-group map tables emitted by `tools/mapjson`, which emitted `palign`
+before `gMapGroups` but not before each group table, so the first `ptr`'s own
+`.balign` padded after the label and skewed the whole table. The later group
+labels happened to be fine only because each is preceded by a `ptr`, which
+aligns as a side effect.
+
+This one would not have appeared during the intro. It is the table the game
+walks to load a map, so it would have shown up as a crash or a wrong map on
+entering the overworld -- the first thing anyone would do on a phone.
+
+After the fix, all 570 symbols in the game data that begin a pointer table are
+8-aligned. arm32 output is unchanged: `palign` is `.balign 4` there and the
+labels were already 4-aligned, verified byte-identical on the generated
+`groups.inc`.
