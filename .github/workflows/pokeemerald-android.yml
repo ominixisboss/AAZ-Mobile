@@ -69,6 +69,31 @@ jobs:
           REPO_REF: ${{ github.event.inputs.ref || 'master' }}
           POKEEMERALD_ABI: ${{ matrix.abi }}
 
+      # NO_MATCHING_ABIS is an install-time failure with no build-time symptom:
+      # the APK builds fine, it just carries native libraries for an ABI the
+      # device does not have. A 64-bit-only phone (Pixel 7 and similar) rejects
+      # an armeabi-v7a-only APK outright. Assert the packaged ABI here so that
+      # never has to be discovered on the device again.
+      - name: Verify packaged ABI
+        env:
+          EXPECTED_ABI: ${{ matrix.abi }}
+        run: |
+          APK=.pokeemerald-multiplatform/android/app/build/outputs/apk/debug/app-debug.apk
+          echo "== native libraries =="
+          unzip -l "$APK" | grep 'lib/' || true
+          FOUND=$(unzip -l "$APK" | sed -n 's#.*lib/\([^/]*\)/.*#\1#p' | sort -u | tr '\n' ' ')
+          FOUND=${FOUND% }
+          echo "packaged ABIs: '$FOUND'  expected: '$EXPECTED_ABI'"
+          if [ "$FOUND" != "$EXPECTED_ABI" ]; then
+            echo "ERROR: APK packages '$FOUND', expected exactly '$EXPECTED_ABI'" >&2
+            exit 1
+          fi
+          if ! unzip -l "$APK" | grep -q "lib/$EXPECTED_ABI/libmain.so"; then
+            echo "ERROR: libmain.so missing from lib/$EXPECTED_ABI/" >&2
+            exit 1
+          fi
+          echo "OK: $EXPECTED_ABI, libmain.so present"
+
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
