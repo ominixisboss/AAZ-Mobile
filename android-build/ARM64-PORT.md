@@ -259,3 +259,81 @@ emulator in the build environment, so nothing here has executed a single frame.
 Runtime faults from a missed 32-bit assumption would look like corrupted
 graphics, wrong text, or a crash on entering a map or a battle, and only
 running the APK will find them.
+
+## Runtime validation: the 64-bit native build
+
+Everything above is a *build-time* result. A build that links is not a game that
+runs, and there is no arm64 device in this environment, so until now nothing
+had executed a single frame.
+
+The fork is 32-bit on every platform it supports -- its own README says "Working
+native 32-bit SDL2 build", 32-bit MinGW, ARMv7 -- so this port is the first
+64-bit build of it anywhere. That also means a **native x86-64 Linux build
+exercises exactly the same code as the Android arm64 build**: the same widened
+game data, the same `sizeof(void *)` reader paths, the same struct layouts.
+`Makefile_pc` therefore gets a `BITS` knob (`BITS=64` selects `--64`/`-m64` and
+defines `PTR64`); `BITS=32` is the default and is byte-for-byte what it was.
+
+    make -f Makefile_pc NATIVE_LINUX=1 BITS=64 -j$(nproc)
+    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy ./pokeemerald
+
+Running it found four real bugs that no amount of building would have caught.
+**Every one of them was present in the arm64 APK.**
+
+### 1. gSongTable was not pointer-aligned
+
+`sound/song_table.inc` opened with `.align 2` (4 bytes). `struct Song` begins
+with a pointer, so on a 64-bit build `ptr`'s own `.balign 8` padded *after* the
+label and skewed every entry by 4 bytes. The symptom was a `songHeader` of
+`0x01539dc000000000` -- a valid 32-bit address sitting in the high half of the
+word. Fixed with `palign`, likewise for `gMPlayTable`.
+
+The general rule this establishes: **`ptr` aligns a pointer within a struct, but
+a label that begins a pointer-bearing struct must itself be `palign`ed.**
+
+### 2. Voice entries had no fixed stride
+
+`struct MP2KInstrument` is 24 bytes on a 64-bit build. 24 is not a power of two,
+so alignment alone cannot produce the stride -- a pointerless entry (square,
+noise) ended at 16 bytes and the next entry's header leaked into its ADSR slot.
+Each entry macro now records its start and pads to `VOICE_ENTRY_SIZE`.
+
+Those same pointerless voices also needed *internal* padding: their 4-byte
+config and ADSR fields sit in unions that are 8 bytes wide once a pointer is a
+member, so `pad32` was added after the header and after the config.
+
+### 3. SoundInfo and SoundMixerState disagreed by 16 bytes
+
+`music_player.c` casts `SOUND_INFO_PTR` straight to `struct SoundMixerState`, so
+the two declarations describe the same memory and must match. `SoundInfo` ended
+its function-pointer block with `u8 gap2[16]` where `SoundMixerState` has four
+reserved *pointers*. Four pointers are 16 bytes at 32-bit -- and 32 at 64-bit,
+so everything from `chans` onward was skewed by 16 (`chans` at 120 vs 136,
+sizes 40432 vs 40448). Changed to `void *gap2[4]`, which is identical at 32-bit
+and correct at 64.
+
+### 4. Pokemon cry songs truncated a pointer
+
+`struct PokemonCrySong` is a song header and its track bytecode in one struct,
+and it stored its GOTO target as `u32 gotoTarget`. `m4a.c` wrote
+`(u32)&gPokemonCrySongs[i].cont`, truncating a 64-bit address, and
+`MP2K_event_goto` read it back with `memcpy(..., sizeof(u8 *))` -- 8 bytes -- so
+it got 4 bytes of address plus 4 bytes of whatever followed. It is now
+`u8 gotoTarget[sizeof(void *)]`, written with `memcpy`: pointer-width, and
+deliberately a byte array so no alignment padding is inserted into a bytecode
+stream that the interpreter walks sequentially.
+
+### Result
+
+The 64-bit binary now runs indefinitely: verified on a clean clone of master
+plus this patch series, 90 seconds without a fault, CPU time climbing steadily
+across three threads with the main thread in SDL's frame-pacing sleep.
+
+arm32 output is unaffected -- `data/sound_data.s` assembles to a byte-identical
+7,506,592-byte blob before and after, with no assembler warnings.
+
+### What is still unverified
+
+Headless, nothing checks what is on screen. The game reaches and sustains its
+main loop; it has not been shown to render correctly, accept input, battle, or
+save. Those need a real device or a display.

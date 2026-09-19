@@ -1,3 +1,57 @@
+diff --git a/Makefile_pc b/Makefile_pc
+index f961d552e..e2d917874 100644
+--- a/Makefile_pc
++++ b/Makefile_pc
+@@ -1,5 +1,25 @@
+ NATIVE_LINUX ?= 0
+ 
++# Pointer width for the native build. BITS=64 selects the 64-bit assembler and
++# compiler modes and defines PTR64, so the macros in asm/macros/ptr.inc emit
++# 8-byte pointers throughout the game data. The default is 32, which is what
++# the Windows target and the original Linux target use, and which produces
++# byte-identical output to before this knob existed.
++#
++# A 64-bit native build is the only way to exercise the pointer-width port
++# without an arm64 device: it runs exactly the same widened data and the same
++# sizeof(void *) reader paths as the Android arm64-v8a build.
++BITS ?= 32
++ifeq ($(BITS),64)
++AS_BITS := --64
++CC_BITS := -m64
++PTR64_DEFSYM := --defsym PTR64=1
++else
++AS_BITS := --32
++CC_BITS := -m32
++PTR64_DEFSYM :=
++endif
++
+ ifeq ($(NATIVE_LINUX),1)
+ PREFIX :=
+ SDL_DIR :=
+@@ -63,12 +83,12 @@ DATA_ASM_BUILDDIR = $(OBJ_DIR)/$(DATA_ASM_SUBDIR)
+ SONG_BUILDDIR = $(OBJ_DIR)/$(SONG_SUBDIR)
+ MID_BUILDDIR = $(OBJ_DIR)/$(MID_SUBDIR)
+ 
+-ASFLAGS := --32 --defsym MODERN=$(MODERN) --defsym PORTABLE=1 --defsym UBFIX=1
++ASFLAGS := $(AS_BITS) $(PTR64_DEFSYM) --defsym MODERN=$(MODERN) --defsym PORTABLE=1 --defsym UBFIX=1
+ 
+ GCC_VER := $(shell $(CC) -dumpversion)
+ 
+ CC1 	:= $(shell $(PREFIX)gcc --print-prog-name=cc1) -quiet
+-override CFLAGS += -Wno-trigraphs -Wimplicit -Wparentheses -Wunused -m32 -std=gnu99 -fno-dce -fno-builtin -Wno-unused-function -DPORTABLE -DNONMATCHING -D UBFIX -DMODERN=$(MODERN)
++override CFLAGS += -Wno-trigraphs -Wimplicit -Wparentheses -Wunused $(CC_BITS) -std=gnu99 -fno-dce -fno-builtin -Wno-unused-function -DPORTABLE -DNONMATCHING -D UBFIX -DMODERN=$(MODERN)
+ ifeq ($(NATIVE_LINUX),1)
+ override CFLAGS += -fno-pie
+ ROM := pokeemerald
+@@ -81,7 +101,7 @@ endif
+ 
+ CPPFLAGS := -std=gnu99 -iquote include -iquote $(GFLIB_SUBDIR) -Wno-trigraphs -D NONMATCHING -D PORTABLE -D $(TARGET_PLATFORM) -D $(TILE_RENDERER) -D MODERN=$(MODERN) -D UBFIX
+ ifeq ($(NATIVE_LINUX),1)
+-CPPFLAGS += -m32 -D NATIVE_LINUX $(shell pkg-config --cflags sdl2 SDL2_image)
++CPPFLAGS += $(CC_BITS) -D NATIVE_LINUX $(shell pkg-config --cflags sdl2 SDL2_image)
+ else
+ CPPFLAGS += -I$(SDL_DIR)/include -L$(SDL_DIR)/lib
+ endif
 diff --git a/android/app/build.gradle b/android/app/build.gradle
 index 146db1978..8f443203c 100644
 --- a/android/app/build.gradle
@@ -2789,15 +2843,71 @@ index 6e91c390c..02ff367d3 100644
  	.endm
  
 diff --git a/asm/macros/music_voice.inc b/asm/macros/music_voice.inc
-index 04a734324..7f4fbb77f 100644
+index 04a734324..d9d2c0d50 100644
 --- a/asm/macros/music_voice.inc
 +++ b/asm/macros/music_voice.inc
-@@ -1,3 +1,4 @@
+@@ -1,16 +1,60 @@
++// Each voice entry is one struct ToneData, which is 12 bytes on a 32-bit
++// target and 24 on a 64-bit one (4 u8, 4 pad, an 8-byte pointer, 4 u8, 4 pad).
++// The `ptr` macro aligns the pointer *within* an entry, but that is not enough
++// on its own: without padding each entry out to the full struct size, entry N
++// starts wherever entry N-1 happened to end and every field after the first
++// entry is skewed. voice_group indexes by 0x18, so each entry must occupy
++// exactly that. 24 is not a power of two, so .balign cannot produce the
++// stride -- alignment alone leaves a pointerless entry (square/noise) at 16
++// bytes and the next entry's header leaks into its ADSR slot. Each entry
++// macro below therefore records its start and pads out to VOICE_ENTRY_SIZE.
 +	.include "asm/macros/ptr.inc"
++
++	.ifdef PTR64
++	.equiv VOICE_ENTRY_SIZE, 0x18
++	.else
++	.equiv VOICE_ENTRY_SIZE, 0xC
++	.endif
  	.macro voice_directsound base_midi_key:req, pan:req, sample_data_pointer:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
  	.byte 0
  	_voice_directsound \base_midi_key, \pan, \sample_data_pointer, \attack, \decay, \sustain, \release
-@@ -21,7 +22,7 @@
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro voice_directsound_no_resample base_midi_key:req, pan:req, sample_data_pointer:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	.byte 8
+ 	_voice_directsound \base_midi_key, \pan, \sample_data_pointer, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro voice_directsound_alt base_midi_key:req, pan:req, sample_data_pointer:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	.byte 16
+ 	_voice_directsound \base_midi_key, \pan, \sample_data_pointer, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro _voice_directsound base_midi_key:req, pan:req, sample_data_pointer:req, attack:req, decay:req, sustain:req, release:req
+@@ -21,7 +65,7 @@
  	.else
  	.byte 0
  	.endif
@@ -2806,7 +2916,119 @@ index 04a734324..7f4fbb77f 100644
  	.byte \attack
  	.byte \decay
  	.byte \sustain
-@@ -95,7 +96,7 @@
+@@ -29,11 +73,29 @@
+ 	.endm
+ 
+ 	.macro voice_square_1 base_midi_key:req, pan:req, sweep:req, duty_cycle:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	_voice_square_1 1, \base_midi_key, \pan, \sweep, \duty_cycle, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro voice_square_1_alt base_midi_key:req, pan:req, sweep:req, duty_cycle:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	_voice_square_1 9, \base_midi_key, \pan, \sweep, \duty_cycle, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro _voice_square_1 type:req, base_midi_key:req, pan:req, sweep:req, duty_cycle:req, attack:req, decay:req, sustain:req, release:req
+@@ -45,8 +107,10 @@
+ 	.byte 0
+ 	.endif
+ 	.byte \sweep
++	pad32 // header is 4 bytes; the union starts at 8
+ 	.byte (\duty_cycle & 0x3)
+ 	.byte 0, 0, 0
++	pad32 // the config union is 8 bytes wide; ADSR starts at 16
+ 	.byte (\attack  & 0x7)
+ 	.byte (\decay   & 0x7)
+ 	.byte (\sustain & 0xF)
+@@ -54,11 +118,29 @@
+ 	.endm
+ 
+ 	.macro voice_square_2 base_midi_key:req, pan:req, duty_cycle:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	_voice_square_2 2, \base_midi_key, \pan, \duty_cycle, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro voice_square_2_alt base_midi_key:req, pan:req, duty_cycle:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	_voice_square_2 10, \base_midi_key, \pan, \duty_cycle, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro _voice_square_2 type:req, base_midi_key:req, pan:req, duty_cycle:req, attack:req, decay:req, sustain:req, release:req
+@@ -70,8 +152,10 @@
+ 	.byte 0
+ 	.endif
+ 	.byte 0
++	pad32 // header is 4 bytes; the union starts at 8
+ 	.byte (\duty_cycle & 0x3)
+ 	.byte 0, 0, 0
++	pad32 // the config union is 8 bytes wide; ADSR starts at 16
+ 	.byte (\attack  & 0x7)
+ 	.byte (\decay   & 0x7)
+ 	.byte (\sustain & 0xF)
+@@ -79,11 +163,29 @@
+ 	.endm
+ 
+ 	.macro voice_programmable_wave base_midi_key:req, pan:req, wave_samples_pointer:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	_voice_programmable_wave 3, \base_midi_key, \pan, \wave_samples_pointer, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro voice_programmable_wave_alt base_midi_key:req, pan:req, wave_samples_pointer:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	_voice_programmable_wave 11, \base_midi_key, \pan, \wave_samples_pointer, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro _voice_programmable_wave type:req, base_midi_key:req, pan:req, wave_samples_pointer:req, attack:req, decay:req, sustain:req, release:req
+@@ -95,7 +197,7 @@
  	.byte 0
  	.endif
  	.byte 0
@@ -2815,43 +3037,121 @@ index 04a734324..7f4fbb77f 100644
  	.byte (\attack  & 0x7)
  	.byte (\decay   & 0x7)
  	.byte (\sustain & 0xF)
-@@ -129,24 +130,24 @@
+@@ -103,11 +205,29 @@
+ 	.endm
+ 
+ 	.macro voice_noise base_midi_key:req, pan:req, period:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	_voice_noise 4, \base_midi_key, \pan, \period, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro voice_noise_alt base_midi_key:req, pan:req, period:req, attack:req, decay:req, sustain:req, release:req
++	palign
++99:
+ 	_voice_noise 12, \base_midi_key, \pan, \period, \attack, \decay, \sustain, \release
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
+ 	.endm
+ 
+ 	.macro _voice_noise type:req, base_midi_key:req, pan:req, period:req, attack:req, decay:req, sustain:req, release:req
+@@ -119,8 +239,10 @@
+ 	.byte 0
+ 	.endif
+ 	.byte 0
++	pad32 // header is 4 bytes; the union starts at 8
+ 	.byte (\period & 0x1)
+ 	.byte 0, 0, 0
++	pad32 // the config union is 8 bytes wide; ADSR starts at 16
+ 	.byte (\attack  & 0x7)
+ 	.byte (\decay   & 0x7)
+ 	.byte (\sustain & 0xF)
+@@ -128,25 +250,61 @@
+ 	.endm
  
  	.macro voice_keysplit voice_group_pointer:req, keysplit_table_pointer:req
++	palign
++99:
  	.byte 0x40, 0, 0, 0
 -	.int \voice_group_pointer
 -	.int \keysplit_table_pointer
 +	ptr \voice_group_pointer
 +	ptr \keysplit_table_pointer
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
  	.endm
  
  	.macro voice_keysplit_all voice_group_pointer:req
++	palign
++99:
  	.byte 0x80, 0, 0, 0
 -	.int \voice_group_pointer
 -	.int 0
 +	ptr \voice_group_pointer
 +	ptr 0
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
  	.endm
  
  	.macro cry sample:req
++	palign
++99:
  	.byte 0x20, 60, 0, 0
 -	.int \sample
 +	ptr \sample
  	.byte 0xff, 0, 0xff, 0
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
  	.endm
  
  	.macro cry_reverse sample:req
++	palign
++99:
  	.byte 0x30, 60, 0, 0
 -	.int \sample
 +	ptr \sample
  	.byte 0xff, 0, 0xff, 0
++	// 64-bit only: a 32-bit entry is already exactly VOICE_ENTRY_SIZE, and
++	// emitting .space 0 there just produces a warning per entry. (.if cannot
++	// be used to guard it -- ptr's .balign makes `. - 99b` non-constant at
++	// parse time.)
++	.ifdef PTR64
++	.space VOICE_ENTRY_SIZE - (. - 99b)
++	.endif
  	.endm
 diff --git a/asm/macros/ptr.inc b/asm/macros/ptr.inc
 new file mode 100644
-index 000000000..7bdd6c328
+index 000000000..a0655bb6b
 --- /dev/null
 +++ b/asm/macros/ptr.inc
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,57 @@
 +// Pointer emission that adapts to the target's pointer width.
 +//
 +// The decomp emits data pointers as .4byte/.int, which is correct for a 32-bit
@@ -2881,7 +3181,7 @@ index 000000000..7bdd6c328
 +	.macro ptr label:req
 +	.ifdef PTR64
 +	.balign 8
-+	.xword \label
++	.quad \label
 +	.else
 +	.4byte \label
 +	.endif
@@ -2889,12 +3189,22 @@ index 000000000..7bdd6c328
 +	// Pointer inside a bytecode stream. Identical to `ptr` except that it
 +	// never aligns: script bytecode is walked sequentially by an interpreter
 +	// that has no idea padding exists, so inserting any would desynchronise
-+	// it. Unaligned .xword is legal and relocates fine on arm64.
++	// it. Unaligned .quad is legal and relocates fine on arm64.
 +	.macro ptr_stream label:req
 +	.ifdef PTR64
-+	.xword \label
++	.quad \label
 +	.else
 +	.4byte \label
++	.endif
++	.endm
++
++
++	// Four bytes of padding that exist only on a 64-bit target. Used where a
++	// 32-bit layout packs a 4-byte field into a slot that becomes 8 bytes
++	// wide once pointers grow -- a union with a pointer member, for example.
++	.macro pad32
++	.ifdef PTR64
++	.space 4
 +	.endif
 +	.endm
 +
@@ -4770,6 +5080,38 @@ index 7ddb92e35..f3cf79d68 100755
  
  #define SECTORS_PER_BANK 16
  
+diff --git a/include/gba/m4a_internal.h b/include/gba/m4a_internal.h
+index f4847abdb..832ee9532 100755
+--- a/include/gba/m4a_internal.h
++++ b/include/gba/m4a_internal.h
+@@ -215,7 +215,13 @@ struct SoundInfo
+     MPlayFunc *MPlayJumpTable;
+     PlyNoteFunc plynote;
+     ExtVolPitFunc ExtVolPit;
+-    u8 gap2[16];
++    // Four reserved pointer slots, not 16 raw bytes. music_player.c casts this
++    // same memory to struct SoundMixerState, which declares them as
++    // reserved2..reserved5 -- four pointers. At 4 bytes each that is 16 bytes
++    // and the two views agree; at 8 bytes each the raw array is 16 bytes short
++    // and every field from chans onwards is skewed by 16, which shows up as a
++    // garbage cmdPtr the moment a track is read.
++    void *gap2[4];
+     struct SoundChannel chans[MAX_DIRECTSOUND_CHANNELS];
+     float pcmBuffer[PCM_DMA_BUF_SIZE * 2];
+ };
+@@ -242,7 +248,11 @@ struct PokemonCrySong
+     u8 part0; // 0x11
+     u8 tuneValue; // 0x12
+     u8 gotoCmd; // 0x13
+-    u32 gotoTarget; // 0x14
++    // A GOTO target inside a bytecode stream, so it must be pointer-width and
++    // must not be aligned: MP2K_event_goto memcpys sizeof(u8 *) bytes from
++    // immediately after gotoCmd. As a u32 it truncated the address on a 64-bit
++    // build and the reader then pulled in 4 bytes of whatever followed.
++    u8 gotoTarget[sizeof(void *)]; // 0x14
+     u8 part1; // 0x18
+     u8 tuneValue2; // 0x19
+     u8 cont[2]; // 0x1A
 diff --git a/include/global.h b/include/global.h
 index 1653b3a07..132e22d66 100644
 --- a/include/global.h
@@ -4861,6 +5203,33 @@ index 7c180e961..b2d1d9dab 100755
  u32 ScriptReadWord(struct ScriptContext *ctx);
  void LockPlayerFieldControls(void);
  void UnlockPlayerFieldControls(void);
+diff --git a/sound/music_player_table.inc b/sound/music_player_table.inc
+index b16829473..5c31bad8d 100644
+--- a/sound/music_player_table.inc
++++ b/sound/music_player_table.inc
+@@ -9,7 +9,8 @@
+ 
+ 	.section .rodata
+ 
+-	.align 2
++	// See song_table.inc: struct MusicPlayer starts with a pointer.
++	palign
+ gMPlayTable::
+ 	music_player gMPlayInfo_BGM, gMPlayTrack_BGM, NUM_TRACKS_BGM, 0
+ 	music_player gMPlayInfo_SE1, gMPlayTrack_SE1, NUM_TRACKS_SE1, 1
+diff --git a/sound/song_table.inc b/sound/song_table.inc
+index c551a656b..15503794e 100644
+--- a/sound/song_table.inc
++++ b/sound/song_table.inc
+@@ -1,4 +1,7 @@
+-	.align 2
++	// palign, not .align 2: struct Song starts with a pointer, so on a
++	// 64-bit build the table itself must be 8-aligned or ptr's .balign
++	// pads *after* this label and skews every entry by 4 bytes.
++	palign
+ 
+ gSongTable::
+ 	song mus_dummy, 0, 0
 diff --git a/sound/songs/se_dex_page.s b/sound/songs/se_dex_page.s
 index 2e7500277..8d3a0d409 100644
 --- a/sound/songs/se_dex_page.s
@@ -12734,6 +13103,35 @@ index 5dcc4b3c0..c79a5f392 100644
  }
  
  void FieldEffectFreeGraphicsResources(struct Sprite *sprite)
+diff --git a/src/m4a.c b/src/m4a.c
+index f6499e673..dc474c74a 100644
+--- a/src/m4a.c
++++ b/src/m4a.c
+@@ -1736,7 +1736,10 @@ start_song:
+     gPokemonCrySongs[i].tone = tone;
+     gPokemonCrySongs[i].part[0] = &gPokemonCrySongs[i].part0;
+     gPokemonCrySongs[i].part[1] = &gPokemonCrySongs[i].part1;
+-    gPokemonCrySongs[i].gotoTarget = (u32)&gPokemonCrySongs[i].cont;
++    {
++        u8 *gotoTarget = (u8 *)&gPokemonCrySongs[i].cont;
++        memcpy(gPokemonCrySongs[i].gotoTarget, &gotoTarget, sizeof(gotoTarget));
++    }
+ 
+     mplayInfo->ident = ID_NUMBER;
+ 
+diff --git a/src/m4a_tables.c b/src/m4a_tables.c
+index ba8827690..3b4d51872 100644
+--- a/src/m4a_tables.c
++++ b/src/m4a_tables.c
+@@ -267,7 +267,7 @@ const struct PokemonCrySong gPokemonCrySongTemplate =
+     .part0 = TUNE,
+     .tuneValue = C_V,
+     .gotoCmd = GOTO,
+-    .gotoTarget = 0,
++    .gotoTarget = {0},
+     .part1 = TUNE,
+     .tuneValue2 = C_V + 16,
+     .cont = {VOICE, 0}, // part0 jumps here with gotoCmd
 diff --git a/src/platform/bios.c b/src/platform/bios.c
 index f13c6fd90..34bc3ceff 100644
 --- a/src/platform/bios.c
