@@ -134,3 +134,56 @@ jobs:
 
       - name: Build and run
         run: ./android-build/build-native64.sh
+
+  # Publishes the APKs as assets on a rolling "latest" release, so they have a
+  # permanent direct download link that needs no GitHub login and is not a zip:
+  #   .../releases/latest/download/pokeemerald-arm64-v8a.apk
+  # A CI artifact is login-gated, expires after 90 days and downloads as a zip
+  # that Android will not open, which makes it awkward to install on a phone.
+  #
+  # Gated on every build job passing, including the runtime check, so a release
+  # is never published for a build that is known to crash.
+  release:
+    runs-on: ubuntu-latest
+    needs: [apk, native64]
+    if: success()
+    permissions:
+      contents: write
+    name: publish release
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pokeemerald-debug-apk-*
+          path: apks
+
+      # Both artifacts contain a file called app-debug.apk, so give them names
+      # that say which ABI they are before they become release assets.
+      - name: Name the assets by ABI
+        run: |
+          mkdir -p out
+          for abi in arm64-v8a armeabi-v7a; do
+            src="apks/pokeemerald-debug-apk-$abi/app-debug.apk"
+            [ -f "$src" ] || { echo "missing $src" >&2; exit 1; }
+            cp "$src" "out/pokeemerald-$abi.apk"
+          done
+          ls -la out/
+          sha256sum out/*.apk
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          prerelease: true
+          body: |
+            Debug builds of the native SDL2 port. No emulator, no commercial ROM.
+
+            **On a phone, use `pokeemerald-arm64-v8a.apk`.** `armeabi-v7a` is
+            32-bit and will not install on a 64-bit-only device.
+
+            Built from `${{ github.sha }}`. Debug-signed, so Android will ask
+            you to allow installing from an unknown source.
+
+            Verified in CI: each APK packages exactly its own ABI, and the
+            64-bit code runs headless without crashing. Rendering, input,
+            battles and saving are not covered by any automated check.
+          files: out/*.apk
